@@ -6,12 +6,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/windows"
 )
 
 func StartExecuters() {
-
+	go startUserExecuter()
+	startAdminExecuter()
 }
 
 func startUserExecuter() {
@@ -24,12 +26,16 @@ func startUserExecuter() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// start executer-user
-	proc := exec.Command(executable, "executer-user")
-	proc.Stdout = logFile
-	proc.Stderr = proc.Stdout
-	proc.Run()
+	for {
+		log.Print("Starting executer-user")
+		// start executer-user
+		proc := exec.Command(executable, "executer-user")
+		proc.Stdout = logFile
+		proc.Stderr = proc.Stdout
+		proc.Run()
+		log.Print("Stopped executer-user")
+		time.Sleep(2 * time.Second)
+	}
 }
 
 func startAdminExecuter() {
