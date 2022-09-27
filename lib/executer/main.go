@@ -19,6 +19,7 @@ func ExecuterMain(isAdmin bool) {
 		Mode = data.ExecuterUser
 	}
 	connect()
+	log.Print("Negotiate complete, listening...")
 	listen()
 }
 

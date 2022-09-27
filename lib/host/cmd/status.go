@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"context"
+	"strings"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
 )
@@ -11,17 +11,20 @@ const STATUS = "STATUS"
 type StatusCmd struct {
 	plugin *plugin.Plugin
 	param  []string
-	ctx    context.Context
 }
 
-func NewStatusCmd(plugin *plugin.Plugin, param []string, ctx context.Context) *CallCmd {
-	return &CallCmd{
+func NewStatusCmd(plugin *plugin.Plugin, param []string) *StatusCmd {
+	return &StatusCmd{
 		plugin: plugin,
 		param:  param,
-		ctx:    ctx,
 	}
 }
 
-// func (c *StatusCmd) run() error {
+func (c *StatusCmd) Run() error {
+	text := strings.Join(c.param, " ")
+	c.plugin.ActionData.SetActionStatusText(text)
+	return nil
+}
 
-// }
+func (c *StatusCmd) Stop() {
+}

@@ -1,16 +1,18 @@
 package executer
 
 import (
-	"bytes"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/data"
 )
 
 type ExecCmd struct {
 	requestId int
+	logPath   string
 	command   *exec.Cmd
 }
 
@@ -20,6 +22,7 @@ func Exec(cmddata data.ExecuterExecData) {
 	cmd.Env = append(cmd.Env, cmddata.Env...)
 	execcmd := ExecCmd{
 		requestId: cmddata.RequestId,
+		logPath:   cmddata.LogFile,
 		command:   cmd,
 	}
 	cmds[cmddata.RequestId] = &execcmd
@@ -27,23 +30,32 @@ func Exec(cmddata data.ExecuterExecData) {
 }
 
 func (c *ExecCmd) run() {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	c.command.Stdout = &stdout
-	c.command.Stderr = &stderr
+	logFile, err := os.OpenFile(c.logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
+	if err != nil {
+		log.Print("Failed to open log file")
+		send(data.NewExecuterResult(-1, c.requestId))
+	}
+	defer logFile.Close()
+	c.command.Stdout = logFile
+	c.command.Stderr = logFile
 	if c.command.Dir == "" {
 		executable, err := exec.LookPath(c.command.Args[0])
 		if err != nil {
-			send(data.NewExecuterResult(-1, "", "Failed to find exec file dir", c.requestId))
+			c.command.Stderr.Write([]byte("Failed to find exec file dir"))
+			send(data.NewExecuterResult(-1, c.requestId))
+			return
 		}
 		c.command.Dir = filepath.Dir(executable)
 	}
-	err := c.command.Start()
+	err = c.command.Start()
+	c.command.Stderr.Write([]byte("EXEC: running " + strings.Join(c.command.Args, " , ") + "\n"))
 	if err != nil {
-		send(data.NewExecuterResult(-1, "", "Failed to start process", c.requestId))
+		c.command.Stderr.Write([]byte("Failed to start process"))
+		send(data.NewExecuterResult(-1, c.requestId))
+		return
 	} else {
 		c.command.Wait()
-		send(data.NewExecuterResult(c.command.ProcessState.ExitCode(), stdout.String(), stderr.String(), c.requestId))
+		send(data.NewExecuterResult(c.command.ProcessState.ExitCode(), c.requestId))
 	}
 }
 

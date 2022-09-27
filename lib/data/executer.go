@@ -22,16 +22,18 @@ type ExecuterExecData struct {
 	Command   ExecuterCommand `json:"command"`
 	Args      []string        `json:"args"`
 	WorkDir   string          `json:"work_dir"`
+	LogFile   string          `json:"log_file"`
 	Env       []string        `json:"env"`
 	RequestId int             `json:"request_id"`
 }
 
-func NewExecuterExec(args []string, workDir string, env []string, requestId int) ExecuterExecData {
+func NewExecuterExec(args []string, workDir, logFile string, env []string, requestId int) ExecuterExecData {
 	return ExecuterExecData{
 		DataType:  DataTypeExecuterCommand,
 		Command:   ExecuterCommandExec,
 		Args:      args,
 		WorkDir:   workDir,
+		LogFile:   logFile,
 		Env:       env,
 		RequestId: requestId,
 	}
@@ -54,17 +56,13 @@ func NewExecuterStop(stopId int) ExecuterStopData {
 type ExecuterResultData struct {
 	Data_type  DataType `json:"data_type"`
 	Code       int      `json:"code"`
-	Stdout     string   `json:"stdout"`
-	Stderr     string   `json:"stderr"`
 	Request_id int      `json:"request_id"`
 }
 
-func NewExecuterResult(statuscode int, stdout string, stderr string, request_id int) ExecuterResultData {
+func NewExecuterResult(statuscode int, request_id int) ExecuterResultData {
 	return ExecuterResultData{
 		Data_type:  DataTypeExecuterResult,
 		Code:       statuscode,
-		Stdout:     stdout,
-		Stderr:     stderr,
 		Request_id: request_id,
 	}
 }

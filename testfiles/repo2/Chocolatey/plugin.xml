@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+    <plugin_xml_version>2</plugin_xml_version>
+    <general>
+        <name>Chocolatey</name>
+        <version>1</version> <!-- 整数値 -->
+        <description>
+            ChocolateyをPCCPlugin外部パッケージマネージャーとしてインストールします。
+        </description> <!-- 説明を書きます-->
+        <plugin_author>ozraru</plugin_author> <!-- プラグイン作成者を書きます-->
+        <plugin_licence>MIT</plugin_licence> <!-- プラグインのライセンスを書きます-->
+        <buttons> <!-- ユーザーがプラグインメニューから実行できるアクションを指定します。actionsの同名の処理が実行されます。-->
+            <backup>データをバックアップ</backup> <!-- この場合、PCCClientで「データをバックアップ」ボタンを押すと下で定義されたバックアップ処理が実行されます。-->
+        </buttons>
+    </general>
+    <dependency>
+    </dependency>
+    <actions>
+        <new> <!-- installは特別なacitonで、プラグインをユーザーが手動でインストールしたときに実行されます。-->
+            COPY ${plugin_repodir}\Roaming C:\Users\user\AppData\Roaming\Google\AndroidStudio4.2
+        </new>
+        <restore> <!-- restoreは特別なactionで、PCCClientのリストア処理で自動実行されます。-->
+            
+        </restore>
+        <install-ext> <!--外部パッケージのインストールを行います。インストールするパッケージ名は1つ目の引数に格納されます。-->
+            EXEC /ADMIN choco install ${args}
+        </install-ext>
+    </actions>
+</plugin>

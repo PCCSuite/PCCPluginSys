@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
@@ -29,12 +30,11 @@ func NewCallCmd(plugin *plugin.Plugin, param []string, ctx context.Context) *Cal
 	}
 }
 
-var ErrActionNotFound = errors.New("action not found")
-
 var ErrCommandNotFound = errors.New("command not found")
 
 // ErrActionNotFound,ErrStoped throwable
 func (c *CallCmd) Run() error {
+	log.Printf("CALL: plugin: %s, param: %s", c.plugin.General.Name, strings.Join(c.param, " , "))
 	if len(c.param) < 1 {
 		return ErrTooFewArgs
 	}
@@ -52,11 +52,9 @@ func (c *CallCmd) Run() error {
 		}
 		actionName = splitParam[1]
 	}
-	rawAction, ok := actionPlugin.Actions[actionName]
-	if !ok {
-		return ErrActionNotFound
-	}
+	rawAction := actionPlugin.GetAction(actionName)
 	splitAction := strings.Split(rawAction, "\n")
+	log.Printf("CALL: splitAction: %s", strings.Join(splitAction, " , "))
 	for i, v := range splitAction {
 
 		// check stop

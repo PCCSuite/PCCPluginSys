@@ -2,13 +2,13 @@ package data
 
 import "net"
 
-type ClientType int
+type ClientType string
 
 const (
-	ExecuterUser ClientType = iota
-	ExecuterAdmin
-	PCCClient
-	API
+	ExecuterUser  ClientType = "executer-user"
+	ExecuterAdmin ClientType = "executer-admin"
+	PCCClient     ClientType = "pccclient"
+	API           ClientType = "api"
 )
 
 type DataType string

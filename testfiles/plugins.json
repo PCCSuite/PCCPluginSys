@@ -1,0 +1,9 @@
+{
+    "plugins": [
+        {
+            "name": "pl1",
+            "priority": 100,
+            "enabled": true
+        }
+    ]
+}

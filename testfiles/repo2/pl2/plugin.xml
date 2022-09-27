@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+    <plugin_xml_version>2</plugin_xml_version>
+    <general>
+        <name>pl2</name>
+        <version>1</version> <!-- 整数値 -->
+        <description>
+            テスト用プラグイン2です。
+        </description> <!-- 説明を書きます-->
+        <plugin_author>ozraru</plugin_author> <!-- プラグイン作成者を書きます-->
+        <plugin_licence>MIT</plugin_licence> <!-- プラグインのライセンスを書きます-->
+        <buttons> <!-- ユーザーがプラグインメニューから実行できるアクションを指定します。actionsの同名の処理が実行されます。-->
+            <backup>データをバックアップ</backup> <!-- この場合、PCCClientで「データをバックアップ」ボタンを押すと下で定義されたバックアップ処理が実行されます。-->
+        </buttons>
+    </general>
+    <dependency> <!-- 依存しているプラグイン名をスペース区切りで指定します。パッケージマネージャプラグイン(Chocolatey)などの中のパッケージ名を指定することもできます。-->
+    </dependency>
+    <actions>
+        <install> <!-- installは特別なacitonで、プラグインをユーザーが手動でインストールしたときに実行されます。-->
+            EXEC xcopy ${plugin_repodir}\testfile ${plugin_datadir}
+        </install>
+        <restore> <!-- restoreは特別なactionで、PCCClientのリストア処理で自動実行されます。-->
+            EXEC xcopy ${plugin_repodir}\testfile ${plugin_tempdir}
+        </restore>
+    </actions>
+</plugin>

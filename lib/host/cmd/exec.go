@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/data"
@@ -17,7 +18,7 @@ const EXEC = "EXEC"
 var ExecuterUserConn *net.TCPConn
 var ExecuterAdminConn *net.TCPConn
 
-var Process map[int]chan<- *data.ExecuterResultData
+var Process map[int]chan<- *data.ExecuterResultData = make(map[int]chan<- *data.ExecuterResultData)
 
 var lastNum int
 
@@ -73,24 +74,56 @@ paramcheck:
 		default:
 			break paramcheck
 		}
-	}
-	if admin {
-		var network bool
-		if strings.HasPrefix(param[0], "\\\\") {
-			// is absolute network path
-			network = true
-		} else if param[0][1] == ':' {
-			// is absolute drive path
-			if param[0][0] == 'A' || param[0][0] == 'B' {
-				// is pcc_homes or groups
-				network = true
-			} else {
-				network = false
-			}
-		} else if strings.Contains(param[0], string(os.PathSeparator)) {
-			// is relative path
+		if len(c.param) < 1 {
+			return ErrTooFewArgs
 		}
 	}
+	var err error
+	var abs string // absolute path if param[0] is path
+	var network bool
+	if strings.HasPrefix(param[0], "\\\\") {
+		// absolute network path
+		abs, err = filepath.Abs(param[0])
+		network = true
+	} else if len(param[0]) > 1 && param[0][1] == ':' {
+		// absolute drive path
+		abs, err = filepath.Abs(param[0])
+	} else if strings.Contains(param[0], string(os.PathSeparator)) {
+		// relative path
+		if dir == "" {
+			// directory not specified
+			dir = c.pluginCaller.GetRepoDir()
+		}
+		abs, err = filepath.Abs(filepath.Join(dir, param[0]))
+	}
+	if err != nil {
+		return err
+	}
+
+	// if admin && network, copy exec file to tempdir
+	if admin {
+		if !network && abs != "" && (abs[0] == 'A' || abs[0] == 'B') {
+			// is pcc_homes or groups
+			network = true
+		}
+		if network {
+			c.child = NewExecCmd(c.pluginStarter, c.pluginCaller, []string{"robocopy", abs, c.pluginCaller.GetTempDir()}, c.ctx)
+			err = c.child.Run()
+			if err != nil {
+				return err
+			}
+			param[0] = filepath.Join(c.pluginCaller.GetTempDir(), filepath.Base(abs))
+		}
+	}
+
+	// check stopped
+	select {
+	case <-c.ctx.Done():
+		return ErrStopped
+	default:
+	}
+
+	// Execution
 	lastNum++
 	reqId := lastNum
 	env := []string{
@@ -100,16 +133,9 @@ paramcheck:
 		"PLUGIN_DATADIR=" + c.pluginCaller.GetDataDir(),
 		"PLUGIN_TEMPDIR=" + c.pluginCaller.GetTempDir(),
 	}
-	reqData := data.NewExecuterExec(param, dir, env, reqId)
+	logFile := filepath.Join(filepath.Join(c.pluginCaller.GetTempDir(), "executer.log"))
+	reqData := data.NewExecuterExec(param, dir, logFile, env, reqId)
 	raw, err := json.Marshal(reqData)
-	if err != nil {
-		return err
-	}
-	if admin {
-		_, err = ExecuterAdminConn.Write(raw)
-	} else {
-		_, err = ExecuterUserConn.Write(raw)
-	}
 	if err != nil {
 		return err
 	}
@@ -119,6 +145,14 @@ paramcheck:
 	defer func() {
 		Process[reqId] = nil
 	}()
+	if admin {
+		_, err = ExecuterAdminConn.Write(raw)
+	} else {
+		_, err = ExecuterUserConn.Write(raw)
+	}
+	if err != nil {
+		return err
+	}
 	select {
 	case result := <-ch:
 		if !nofail && result.Code != 0 {
@@ -145,4 +179,7 @@ paramcheck:
 
 func (c *ExecCmd) Stop() {
 	c.cancel()
+	if c.child != nil {
+		c.child.Stop()
+	}
 }

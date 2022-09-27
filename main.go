@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/api"
@@ -9,6 +10,9 @@ import (
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		log.Fatal("Must specify arguments")
+	}
 	mode := os.Args[1]
 	switch mode {
 	case "host":

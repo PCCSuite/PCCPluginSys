@@ -12,7 +12,7 @@ type Cmd interface {
 	stop()
 }
 
-var cmds map[int]Cmd
+var cmds map[int]Cmd = make(map[int]Cmd)
 
 func send(result data.ExecuterResultData) {
 	raw, err := json.Marshal(result)

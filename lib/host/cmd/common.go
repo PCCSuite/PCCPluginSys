@@ -13,11 +13,11 @@ type Cmd interface {
 	Stop()
 }
 
-var ErrStopped = errors.New("Stopped running cmd")
+var ErrStopped = errors.New("stopped")
 
 var ErrTooFewArgs = errors.New("too few arguments")
 
-var ErrParseParam = errors.New("Failed to parse action parameter")
+var ErrParseParam = errors.New("failed to parse action parameter")
 
 func parseParam(p string) ([]string, error) {
 	split := strings.Split(p, " ")
@@ -59,13 +59,13 @@ func parseParam(p string) ([]string, error) {
 }
 
 func replaceParams(p []string, pluginStarter *plugin.Plugin, pluginActioner *plugin.Plugin, callArgs []string) []string {
-	result := make([]string, len(p))
+	result := make([]string, 0)
 	for _, v := range p {
-		v = strings.ReplaceAll(v, "${plguin_starter}", pluginStarter.General.Name)
-		v = strings.ReplaceAll(v, "${plguin_name}", pluginActioner.General.Name)
-		v = strings.ReplaceAll(v, "${plguin_repodir}", pluginActioner.GetRepoDir())
-		v = strings.ReplaceAll(v, "${plguin_datadir}", pluginActioner.GetDataDir())
-		v = strings.ReplaceAll(v, "${plguin_tempdir}", pluginActioner.GetTempDir())
+		v = strings.ReplaceAll(v, "${plugin_starter}", pluginStarter.General.Name)
+		v = strings.ReplaceAll(v, "${plugin_name}", pluginActioner.General.Name)
+		v = strings.ReplaceAll(v, "${plugin_repodir}", pluginActioner.GetRepoDir())
+		v = strings.ReplaceAll(v, "${plugin_datadir}", pluginActioner.GetDataDir())
+		v = strings.ReplaceAll(v, "${plugin_tempdir}", pluginActioner.GetTempDir())
 		v = strings.ReplaceAll(v, "${arg}", strings.Join(callArgs, " "))
 		for i := 0; i < 10; i++ {
 			if len(callArgs) > i {
