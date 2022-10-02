@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/status"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/worker"
 )
@@ -40,7 +40,7 @@ func PCCCliListener(conn *net.TCPConn) {
 		case DataTypeInstall:
 			data := InstallCommandData{}
 			json.Unmarshal(raw, &data)
-			worker.InstallPlugin(data.Plugin, 0)
+			worker.InstallPackage(data.Plugin, 0)
 		case DataTypeAction:
 			data := ActionCommandData{}
 			json.Unmarshal(raw, &data)
@@ -60,8 +60,8 @@ func subscriber() {
 	}
 	pluginCh = make(chan struct{})
 	defer close(pluginCh)
-	plugin.SubscribeGlobalStatus(pluginCh)
-	defer plugin.UnsubscribeGlobalStatus(pluginCh)
+	data.SubscribeGlobalStatus(pluginCh)
+	defer data.UnsubscribeGlobalStatus(pluginCh)
 	statusCh = make(chan status.SysStatus)
 	defer close(statusCh)
 	status.Listener = statusCh

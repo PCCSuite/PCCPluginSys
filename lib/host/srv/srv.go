@@ -6,12 +6,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/pccclient"
 )
 
 func StartServer() {
-	listener, err := net.ListenTCP("tcp", data.Addr)
+	listener, err := net.ListenTCP("tcp", common.Addr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,14 +34,14 @@ func accept(listener *net.TCPListener) {
 			conn.Close()
 			continue
 		}
-		msg := data.Negotiate{}
+		msg := common.Negotiate{}
 		err = json.Unmarshal(raw, &msg)
 		if err != nil {
 			log.Print("Error in unmarshaling message from new conn: ", err)
 			conn.Close()
 			continue
 		}
-		if msg.Data_type != data.DataTypeNegotiate {
+		if msg.Data_type != common.DataTypeNegotiate {
 			log.Print("Invalid data_type from new conn: ", err)
 			conn.Close()
 			continue
@@ -51,14 +51,14 @@ func accept(listener *net.TCPListener) {
 	}
 }
 
-func newConn(clientType data.ClientType, conn *net.TCPConn) {
+func newConn(clientType common.ClientType, conn *net.TCPConn) {
 	log.Print("Connected client: ", clientType)
 	switch clientType {
-	case data.ExecuterUser:
+	case common.ExecuterUser:
 		go listenExecuter(conn, false)
-	case data.ExecuterAdmin:
+	case common.ExecuterAdmin:
 		go listenExecuter(conn, true)
-	case data.PCCClient:
+	case common.PCCClient:
 		go pccclient.PCCCliListener(conn)
 	}
 }

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
-	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 )
 
 const EXEC = "EXEC"
@@ -18,27 +18,27 @@ const EXEC = "EXEC"
 var ExecuterUserConn *net.TCPConn
 var ExecuterAdminConn *net.TCPConn
 
-var Process map[int]chan<- *data.ExecuterResultData = make(map[int]chan<- *data.ExecuterResultData)
+var Process map[int]chan<- *common.ExecuterResultData = make(map[int]chan<- *common.ExecuterResultData)
 
 var lastNum int
 
 type ExecCmd struct {
-	pluginStarter *plugin.Plugin
-	pluginCaller  *plugin.Plugin
-	param         []string
-	ctx           context.Context
-	cancel        context.CancelFunc
-	child         Cmd
+	Package *data.Package
+	plugin  *data.Plugin
+	param   []string
+	ctx     context.Context
+	cancel  context.CancelFunc
+	child   Cmd
 }
 
-func NewExecCmd(plugin *plugin.Plugin, caller *plugin.Plugin, param []string, ctx context.Context) *ExecCmd {
+func NewExecCmd(Package *data.Package, plugin *data.Plugin, param []string, ctx context.Context) *ExecCmd {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ExecCmd{
-		pluginStarter: plugin,
-		pluginCaller:  caller,
-		param:         param,
-		ctx:           ctx,
-		cancel:        cancel,
+		Package: Package,
+		plugin:  plugin,
+		param:   param,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 }
 
@@ -52,29 +52,33 @@ func (c *ExecCmd) Run() error {
 	param := c.param
 	admin := false
 	nofail := false
+	noauto := false
 	dir := ""
 paramcheck:
 	for {
-		switch c.param[0] {
+		switch param[0] {
 		case "/ADMIN":
 			param = param[1:]
 			admin = true
 		case "/DATADIR":
-			dir = c.pluginCaller.GetDataDir()
+			dir = c.plugin.GetDataDir()
 			param = param[1:]
 		case "/REPODIR":
-			dir = c.pluginCaller.GetRepoDir()
+			dir = c.plugin.GetRepoDir()
 			param = param[1:]
 		case "/TEMPDIR":
-			dir = c.pluginCaller.GetTempDir()
+			dir = c.plugin.GetTempDir()
 			param = param[1:]
 		case "/NOFAIL":
 			param = param[1:]
 			nofail = true
+		case "/RAW":
+			param = param[1:]
+			noauto = true
 		default:
 			break paramcheck
 		}
-		if len(c.param) < 1 {
+		if len(param) < 1 {
 			return ErrTooFewArgs
 		}
 	}
@@ -92,7 +96,7 @@ paramcheck:
 		// relative path
 		if dir == "" {
 			// directory not specified
-			dir = c.pluginCaller.GetRepoDir()
+			dir = c.plugin.GetRepoDir()
 		}
 		abs, err = filepath.Abs(filepath.Join(dir, param[0]))
 	}
@@ -107,12 +111,18 @@ paramcheck:
 			network = true
 		}
 		if network {
-			c.child = NewExecCmd(c.pluginStarter, c.pluginCaller, []string{"robocopy", abs, c.pluginCaller.GetTempDir()}, c.ctx)
+			c.child = NewExecCmd(c.Package, c.plugin, []string{"robocopy", abs, c.plugin.GetTempDir()}, c.ctx)
 			err = c.child.Run()
 			if err != nil {
 				return err
 			}
-			param[0] = filepath.Join(c.pluginCaller.GetTempDir(), filepath.Base(abs))
+			param[0] = filepath.Join(c.plugin.GetTempDir(), filepath.Base(abs))
+		}
+	}
+
+	if !noauto {
+		if strings.HasSuffix(param[0], ".ps1") {
+			param = append([]string{"powershell.exe", "-NoProfile", "-NonInteractive", "-File"}, param...)
 		}
 	}
 
@@ -127,19 +137,19 @@ paramcheck:
 	lastNum++
 	reqId := lastNum
 	env := []string{
-		"PLUGIN_STARTER=" + c.pluginStarter.General.Name,
-		"PLUGIN_NAME=" + c.pluginCaller.General.Name,
-		"PLUGIN_REPODIR=" + c.pluginCaller.GetRepoDir(),
-		"PLUGIN_DATADIR=" + c.pluginCaller.GetDataDir(),
-		"PLUGIN_TEMPDIR=" + c.pluginCaller.GetTempDir(),
+		"PLUGIN_STARTER=" + c.Package.Name,
+		"PLUGIN_NAME=" + c.plugin.General.Name,
+		"PLUGIN_REPODIR=" + c.plugin.GetRepoDir(),
+		"PLUGIN_DATADIR=" + c.plugin.GetDataDir(),
+		"PLUGIN_TEMPDIR=" + c.plugin.GetTempDir(),
 	}
-	logFile := filepath.Join(filepath.Join(c.pluginCaller.GetTempDir(), "executer.log"))
-	reqData := data.NewExecuterExec(param, dir, logFile, env, reqId)
+	logFile := filepath.Join(filepath.Join(c.plugin.GetTempDir(), "executer.log"))
+	reqData := common.NewExecuterExec(param, dir, logFile, env, reqId)
 	raw, err := json.Marshal(reqData)
 	if err != nil {
 		return err
 	}
-	ch := make(chan *data.ExecuterResultData)
+	ch := make(chan *common.ExecuterResultData)
 	defer close(ch)
 	Process[reqId] = ch
 	defer func() {
@@ -160,7 +170,7 @@ paramcheck:
 		}
 		return nil
 	case <-c.ctx.Done():
-		stopData := data.NewExecuterStop(reqId)
+		stopData := common.NewExecuterStop(reqId)
 		raw, err := json.Marshal(stopData)
 		if err != nil {
 			return err
@@ -174,12 +184,5 @@ paramcheck:
 			return err
 		}
 		return ErrStopped
-	}
-}
-
-func (c *ExecCmd) Stop() {
-	c.cancel()
-	if c.child != nil {
-		c.child.Stop()
 	}
 }

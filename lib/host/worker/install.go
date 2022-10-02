@@ -3,121 +3,142 @@ package worker
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
-	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 )
-
-type InstallingPlugin struct {
-	Name       string
-	ActionData *plugin.ActionData
-	Plugin     *plugin.Plugin
-	Ctx        context.Context
-	cancel     context.CancelFunc
-	cmd        cmd.Cmd
-	Dependent  []Dependency
-}
-
-func (p *InstallingPlugin) WaitIsSucsess(ctx context.Context) bool {
-	if p.Plugin.Installed {
-		return true
-	}
-	if p.Plugin.ActionData.Status == plugin.ActionStatusFailed {
-		return false
-	}
-	ch := make(chan plugin.ActionStatus)
-	defer close(ch)
-	p.ActionData.SubscribeStatus(ch)
-	defer p.ActionData.UnsubscribeStatus(ch)
-	for {
-		select {
-		case status := <-ch:
-			if p.IsEnded() {
-				if p.Plugin.Installed {
-					return true
-				}
-				if status == plugin.ActionStatusFailed {
-					return false
-				}
-				return false
-			}
-		case <-ctx.Done():
-			return false
-		}
-
-	}
-}
-
-func (p *InstallingPlugin) IsEnded() bool {
-	if p.Plugin.Installed {
-		return true
-	}
-	if p.ActionData.Status == plugin.ActionStatusFailed {
-		return true
-	}
-	return false
-}
-
-type Dependency struct {
-	status *InstallingPlugin
-	before bool
-}
-
-var InstallingPlugins map[string]*InstallingPlugin = make(map[string]*InstallingPlugin)
 
 var starterRunning bool
 
-var startQueue []*InstallingPlugin
+var startQueue []*data.InstallingPackage
 
-func InstallPlugin(pluginName string, priority int) (*InstallingPlugin, error) {
-	if installing, ok := InstallingPlugins[pluginName]; ok {
-		if installing.IsEnded() {
+var ErrRepoNotFound = errors.New("repository not found")
+var ErrInstalledOtherRepo = errors.New("plugin already installed from other repository")
+var ErrRepoAlreadyExist = errors.New("same name repository already exists")
+
+func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPackage, error) {
+	var Package *data.Package
+	var packageName string
+	var repoName string
+	var repo *data.Repository
+
+	//
+	// Check package already installing
+	//
+
+	status, ok := data.RunningActions[packageIdentifier]
+
+	if ok {
+		Package = status.Package
+		packageName = status.Package.Name
+		repoName = status.Package.Repo.Name
+		repo = status.Package.Repo
+	} else {
+		if splitName := strings.SplitN(packageIdentifier, ":", 2); len(splitName) == 1 {
+			packageName = packageIdentifier
+		} else {
+			repoName = splitName[0]
+			packageName = splitName[1]
+		}
+		if repoName != "" {
+			repo = data.Repositories[repoName]
+			if repo == nil || repo.Type == data.RepositoryTypeExternal {
+				// external repo
+				Package = data.GetExternalPackage(repoName, packageName)
+			} else {
+				// internal repo
+				plugin := data.GetPlugin(packageName)
+				if plugin != nil {
+					Package = plugin.Package
+					if (Package.Installed || !Package.RunningAction.IsEnded()) && Package.Repo.Name != repoName {
+						status.SetActionStatusBoth(data.ActionStatusFailed, "already instaled from other repository")
+						return nil, ErrInstalledOtherRepo
+					}
+				}
+			}
+		} else {
+			// repo is not specify
+			plugin := data.GetPlugin(packageName)
+			if plugin != nil {
+				Package = plugin.Package
+			}
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		status = data.NewRunningAction(packageIdentifier, data.ActionStatusRunning, "", priority, ctx, cancel)
+	}
+
+	// if package already loaded
+	if Package != nil {
+		installing, ok := data.InstallingPackages[Package]
+		if ok && !installing.IsEnded() {
 			return installing, nil
 		}
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	installing := &InstallingPlugin{
-		Name:       pluginName,
-		ActionData: plugin.NewActionData(pluginName, plugin.ActionStatusRunning, "", priority, cancel),
-		Ctx:        ctx,
-		cancel:     cancel,
+
+	//
+	// Start install
+	//
+
+	installing := &data.InstallingPackage{
+		Status:    status,
+		Dependent: make([]data.InstallingDependency, 0),
 	}
-	InstallingPlugins[pluginName] = installing
-	splitName := strings.SplitN(pluginName, ":", 2)
-	if len(splitName) == 1 {
-		var err error
-		installing.Plugin, err = plugin.SearchPlugin(pluginName)
+	if repoName != "" && (repo == nil || repo.Type == data.RepositoryTypeExternal) {
+		// if external
+		depend, err := InstallPackage(repoName, priority)
 		if err != nil {
-			if errors.Is(err, plugin.ErrPluginNotFound) {
-				installing.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "plugin not found")
+			status.SetActionStatusBoth(data.ActionStatusFailed, "dependency failed")
+			return nil, err
+		}
+		Package = data.NewExternalPackage(packageName, data.Repositories[repoName])
+		installing.Dependent = append(installing.Dependent, data.InstallingDependency{Status: depend, Before: true})
+	} else {
+		// if internal
+		var plugin *data.Plugin
+		var err error
+		if repo != nil {
+			plugin, err = data.LoadPlugin(repo, packageName)
+		} else {
+			plugin, err = data.SearchPlugin(packageName)
+		}
+		if err != nil {
+			if errors.Is(err, data.ErrPluginNotFound) {
+				status.SetActionStatusBoth(data.ActionStatusFailed, "plugin not found")
 			} else {
-				installing.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "load failed")
+				status.SetActionStatusBoth(data.ActionStatusFailed, "load failed")
 			}
 			return installing, err
 		}
-		installing.Plugin.ActionData = installing.ActionData
-		installing.ActionData.Plugin = installing.Plugin
-		for _, v := range installing.Plugin.Dependency.Dependent {
-			depend, err := InstallPlugin(v.Name, priority)
+		Package = plugin.Package
+		for _, v := range plugin.Dependency.Dependent {
+			depend, err := InstallPackage(v.Name, priority)
 			if err != nil {
-				installing.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "dependency failed")
+				status.SetActionStatusBoth(data.ActionStatusFailed, "dependency failed")
 				return installing, err
 			}
-			installing.Dependent = append(installing.Dependent, Dependency{status: depend, before: v.Before})
+			installing.Dependent = append(installing.Dependent, data.InstallingDependency{Status: depend, Before: v.Before})
 		}
-	} else {
-		depend, err := InstallPlugin(splitName[0], priority)
-		if err != nil {
-			installing.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "dependency failed")
-			return installing, err
+		if plugin.GetAction(data.ActionExternal) != "" {
+			thisRepo, ok := data.Repositories[plugin.Name]
+			if ok {
+				if thisRepo.Source != plugin {
+					status.SetActionStatusBoth(data.ActionStatusFailed, ErrRepoAlreadyExist.Error())
+					return installing, ErrRepoAlreadyExist
+				}
+			} else {
+				data.NewExternalRepository(plugin)
+			}
 		}
-		installing.Dependent = append(installing.Dependent, Dependency{status: depend, before: true})
 	}
-	installing.ActionData.SetActionStatusOnly(plugin.ActionStatusWaitStart)
+	Package.RunningAction = status
+	status.Package = Package
+	data.InstallingPackages[Package] = installing
+	status.SetActionStatusOnly(data.ActionStatusWaitStart)
 	startQueue = append(startQueue, installing)
 	needStarter()
 	return installing, nil
@@ -139,90 +160,86 @@ func starter() {
 			return
 		}
 		sort.SliceStable(startQueue, func(i, j int) bool {
-			return startQueue[i].ActionData.Priority < startQueue[j].ActionData.Priority
+			return startQueue[i].Status.Priority < startQueue[j].Status.Priority
 		})
-		go startQueue[0].start()
+		go start(startQueue[0])
 		startQueue = startQueue[1:]
 		time.Sleep(1 * time.Second)
 	}
 }
 
-func (p *InstallingPlugin) start() {
-	err := p.waitDepend(true)
+func start(p *data.InstallingPackage) {
+	err := waitDepend(p, true)
 	if err != nil {
 		return
 	}
-	p.ActionData.SetActionStatusBoth(plugin.ActionStatusRunning, "Checking directories")
 	var newInstall bool
-	_, err = os.Stat(p.Plugin.GetDataDir())
-	if err != nil {
-		newInstall = true
-		err = os.MkdirAll(p.Plugin.GetDataDir(), os.ModeDir)
+	if p.Status.Package.Type != data.PackageTypeExternal {
+		p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Checking directories")
+		_, err = os.Stat(p.Status.Package.Plugin.GetDataDir())
 		if err != nil {
-			p.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "Failed to make datadir")
+			newInstall = true
+			err = os.MkdirAll(p.Status.Package.Plugin.GetDataDir(), os.ModeDir)
+			if err != nil {
+				p.Status.SetActionStatusBoth(data.ActionStatusFailed, "Failed to make datadir")
+				return
+			}
+		}
+		err = os.MkdirAll(p.Status.Package.Plugin.GetTempDir(), os.ModeDir)
+		if err != nil {
+			p.Status.SetActionStatusBoth(data.ActionStatusFailed, "Failed to make tempdir")
 			return
 		}
 	}
-	err = os.MkdirAll(p.Plugin.GetTempDir(), os.ModeDir)
-	if err != nil {
-		p.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "Failed to make tempdir")
-		return
-	}
-	var call *cmd.CallCmd
-	if newInstall {
-		p.ActionData.SetActionStatusBoth(plugin.ActionStatusRunning, "Running action: "+plugin.ActionNewInstall)
-		call = cmd.NewCallCmd(p.Plugin, []string{plugin.ActionNewInstall}, p.Ctx)
+	var action string
+	if p.Status.Package.Type == data.PackageTypeExternal {
+		action = data.ActionExternal
+	} else if newInstall {
+		action = data.ActionNewInstall
 	} else {
-		p.ActionData.SetActionStatusBoth(plugin.ActionStatusRunning, "Running action: "+plugin.ActionRestore)
-		call = cmd.NewCallCmd(p.Plugin, []string{plugin.ActionRestore}, p.Ctx)
+		action = data.ActionRestore
 	}
+	p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Running action: "+action)
+	call := cmd.NewCallCmd(p.Status.Package, []string{action}, p.Status.Ctx)
 	err = call.Run()
 	if err != nil {
-		p.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "Error: "+err.Error())
+		p.Status.SetActionStatusBoth(data.ActionStatusFailed, "Error: "+err.Error())
 		return
 	}
-	err = p.waitDepend(false)
+	err = waitDepend(p, false)
 	if err != nil {
 		return
 	}
-	p.Plugin.Installed = true
-	p.ActionData.SetActionStatusBoth(plugin.ActionStatusDone, "")
+	p.Status.Package.Installed = true
+	p.Status.SetActionStatusBoth(data.ActionStatusDone, "")
 }
 
-func (p *InstallingPlugin) Stop() {
-	p.cancel()
-	if p.cmd != nil {
-		p.cmd.Stop()
-	}
+func Stop(p *data.InstallingPackage) {
+	p.Status.Cancel()
 }
 
 var ErrDependencyFailed = errors.New("dependency failed")
 
-func (p *InstallingPlugin) waitDepend(before bool) error {
+func waitDepend(p *data.InstallingPackage, before bool) error {
 	for _, v := range p.Dependent {
-		p.ActionData.SetActionStatusBoth(plugin.ActionStatusRunning, "Checking dependency: "+v.status.Name)
-		if v.before || !before {
-			installing, ok := InstallingPlugins[v.status.Name]
+		p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Checking dependency: "+v.Status.Status.PackageIdentifier)
+		if v.Before || !before {
+			installing, ok := data.InstallingPackages[v.Status.Status.Package]
 			if !ok {
-				var err error
-				installing, err = InstallPlugin(v.status.Name, p.ActionData.Priority)
-				if err != nil {
-					p.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "dependency failed")
-					return ErrDependencyFailed
-				}
+				log.Panic("Waiting for not installing package")
 			}
 			if !installing.IsEnded() {
-				p.ActionData.SetActionStatusBoth(plugin.ActionStatusWaitDepend, "Waiting for '"+v.status.Name+"'")
+				p.Status.SetActionStatusBoth(data.ActionStatusWaitDepend, "Waiting for '"+v.Status.Status.PackageIdentifier+"'")
 			}
-			ok = installing.WaitIsSucsess(p.Ctx)
+			ok = installing.WaitIsSucsess(p.Status.Ctx)
 			select {
-			case <-p.Ctx.Done():
-				p.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "Stopped")
+			case <-p.Status.Ctx.Done():
+				p.Status.SetActionStatusBoth(data.ActionStatusFailed, "Stopped")
 				return cmd.ErrStopped
 			default:
 			}
 			if !ok {
-				p.ActionData.SetActionStatusBoth(plugin.ActionStatusFailed, "dependency failed")
+				p.Status.SetActionStatusBoth(data.ActionStatusFailed, "dependency failed")
 				return ErrDependencyFailed
 			}
 		}

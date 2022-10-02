@@ -5,18 +5,18 @@ import (
 	"log"
 	"net"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
 )
 
-var Mode data.ClientType
+var Mode common.ClientType
 
 var Conn *net.TCPConn
 
 func ExecuterMain(isAdmin bool) {
 	if isAdmin {
-		Mode = data.ExecuterAdmin
+		Mode = common.ExecuterAdmin
 	} else {
-		Mode = data.ExecuterUser
+		Mode = common.ExecuterUser
 	}
 	connect()
 	log.Print("Negotiate complete, listening...")
@@ -25,11 +25,11 @@ func ExecuterMain(isAdmin bool) {
 
 func connect() {
 	var err error
-	Conn, err = net.DialTCP("tcp", nil, data.Addr)
+	Conn, err = net.DialTCP("tcp", nil, common.Addr)
 	if err != nil {
 		log.Fatal("Failed to connect host: ", err)
 	}
-	negotiate := data.NewNegotiateData(Mode)
+	negotiate := common.NewNegotiateData(Mode)
 	raw, err := json.Marshal(negotiate)
 	if err != nil {
 		log.Fatal("Failed to marshal negotiate data: ", err)

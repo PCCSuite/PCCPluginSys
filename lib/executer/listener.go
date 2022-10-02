@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
 )
 
 func listen() {
@@ -16,27 +16,27 @@ func listen() {
 			log.Print("Error in reading message from conn: ", err)
 			return
 		}
-		cmddata := data.ExecuterCommandData{}
+		cmddata := common.ExecuterCommandData{}
 		err = json.Unmarshal(raw, &cmddata)
 		if err != nil {
 			log.Print("Error in unmarshaling message from conn: ", err)
 			continue
 		}
-		if cmddata.DataType != data.DataTypeExecuterCommand {
+		if cmddata.DataType != common.DataTypeExecuterCommand {
 			log.Print("Unexpected data_type from conn: ", err)
 			continue
 		}
 		switch cmddata.Command {
-		case data.ExecuterCommandExec:
-			execdata := data.ExecuterExecData{}
+		case common.ExecuterCommandExec:
+			execdata := common.ExecuterExecData{}
 			err = json.Unmarshal(raw, &execdata)
 			if err != nil {
 				log.Print("Error in unmarshaling exec message from conn: ", err)
 				continue
 			}
 			Exec(execdata)
-		case data.ExecuterCommandStop:
-			stopdata := data.ExecuterStopData{}
+		case common.ExecuterCommandStop:
+			stopdata := common.ExecuterStopData{}
 			err = json.Unmarshal(raw, &stopdata)
 			if err != nil {
 				log.Print("Error in unmarshaling stop message from conn: ", err)

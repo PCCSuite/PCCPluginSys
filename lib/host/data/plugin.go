@@ -1,4 +1,4 @@
-package plugin
+package data
 
 import (
 	"encoding/xml"
@@ -9,25 +9,26 @@ import (
 	"github.com/PCCSuite/PCCPluginSys/lib/host/config"
 )
 
-var ErrPluginNotFound = errors.New("Plugin is not found in any repositories")
+var ErrPluginNotFound = errors.New("Plugin not found")
 
 var ErrNameNotEqual = errors.New("Plugin name is not equal to dir name")
 
 var ActionRestore = "restore"
 var ActionNewInstall = "install"
+var ActionExternal = "external"
+
+var Plugins []*Plugin = make([]*Plugin, 0)
 
 type Plugin struct {
-	Xml_version int              `xml:"plugin_xml_version"`
+	*Package
+	xml_version int              `xml:"plugin_xml_version"`
 	General     PluginGeneral    `xml:"general"`
 	Dependency  PluginDependency `xml:"dependency"`
 	Actions     PluginActions    `xml:"actions"`
-	RepoDir     string
-	Installed   bool
-	ActionData  *ActionData
 }
 
 func (p *Plugin) GetRepoDir() string {
-	return p.RepoDir
+	return filepath.Join(p.Repo.Directory, p.General.Name)
 }
 
 func (p *Plugin) GetDataDir() string {
@@ -74,25 +75,38 @@ type PluginAction struct {
 	Content string `xml:",chardata"`
 }
 
-var Plugins []*Plugin
-
 func SearchPlugin(name string) (*Plugin, error) {
-	for _, v := range Plugins {
-		if v.General.Name == name {
-			return v, nil
-		}
+	pl := GetPlugin(name)
+	if pl != nil {
+		return pl, nil
 	}
-	for _, v := range config.Config.Repositories {
-		path := filepath.Join(v, name)
-		_, err := os.Stat(path)
+	for _, v := range Repositories {
+		if v.Type != RepositoryTypeDirectory {
+			continue
+		}
+		pl, err := LoadPlugin(v, name)
 		if err == nil {
-			return LoadPlugin(path)
+			return pl, nil
 		}
 	}
 	return nil, ErrPluginNotFound
 }
 
-func LoadPlugin(path string) (*Plugin, error) {
+func GetPlugin(name string) *Plugin {
+	for _, v := range Plugins {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+func LoadPlugin(repo *Repository, name string) (*Plugin, error) {
+	path := filepath.Join(repo.Directory, name)
+	_, err := os.Stat(path)
+	if err != nil {
+		return nil, ErrPluginNotFound
+	}
 	file, err := os.ReadFile(filepath.Join(path, "plugin.xml"))
 	if err != nil {
 		return nil, err
@@ -102,10 +116,16 @@ func LoadPlugin(path string) (*Plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	if plugin.General.Name != filepath.Base(path) {
+	if plugin.General.Name != name {
 		return nil, ErrNameNotEqual
 	}
-	plugin.RepoDir = path
+	plugin.Package = &Package{
+		Name:      name,
+		Type:      PackageTypeInternal,
+		Repo:      repo,
+		Plugin:    &plugin,
+		Installed: false,
+	}
 	Plugins = append(Plugins, &plugin)
 	return &plugin, nil
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
 )
 
@@ -59,7 +59,7 @@ func listenExecuter(conn *net.TCPConn, admin bool) {
 			conn.Close()
 			return
 		}
-		data := data.ExecuterResultData{}
+		data := common.ExecuterResultData{}
 		err = json.Unmarshal(raw, &data)
 		if err != nil {
 			log.Print("Error in unmarshaling message from executer: ", err)

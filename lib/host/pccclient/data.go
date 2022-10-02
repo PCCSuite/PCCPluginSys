@@ -1,7 +1,7 @@
 package pccclient
 
 import (
-	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/status"
 )
 
@@ -30,19 +30,19 @@ func NewClientNotifyData(status status.SysStatus, plugins []PluginData) ClientNo
 }
 
 type PluginData struct {
-	Name       string              `json:"name"`
-	RepoDir    string              `json:"repodir"`
-	Installed  bool                `json:"installed"`
-	Locking    bool                `json:"locking"`
-	Status     plugin.ActionStatus `json:"status"`
-	StatusText string              `json:"status_text"`
-	Dependency []string            `json:"dependency"`
+	Name       string            `json:"name"`
+	Repository string            `json:"repository"`
+	Installed  bool              `json:"installed"`
+	Locking    bool              `json:"locking"`
+	Status     data.ActionStatus `json:"status"`
+	StatusText string            `json:"status_text"`
+	Dependency []string          `json:"dependency"`
 }
 
-func NewPluginData(name, repodir string, installed, locking bool, status plugin.ActionStatus, statusText string, dependency []string) PluginData {
+func NewPluginData(name, repository string, installed, locking bool, status data.ActionStatus, statusText string, dependency []string) PluginData {
 	return PluginData{
 		Name:       name,
-		RepoDir:    repodir,
+		Repository: repository,
 		Installed:  installed,
 		Locking:    locking,
 		Status:     status,

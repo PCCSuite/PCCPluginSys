@@ -1,4 +1,4 @@
-package data
+package common
 
 const (
 	DataTypeExecuterCommand DataType = "executer_command"

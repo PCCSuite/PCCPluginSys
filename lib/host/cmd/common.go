@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 )
 
 type Cmd interface {
 	Run() error
-	Stop()
 }
 
 var ErrStopped = errors.New("stopped")
 
 var ErrTooFewArgs = errors.New("too few arguments")
+var ErrTooMuchArgs = errors.New("too much arguments")
 
 var ErrParseParam = errors.New("failed to parse action parameter")
 
@@ -58,14 +58,14 @@ func parseParam(p string) ([]string, error) {
 	return result, nil
 }
 
-func replaceParams(p []string, pluginStarter *plugin.Plugin, pluginActioner *plugin.Plugin, callArgs []string) []string {
+func replaceParams(p []string, Package *data.Package, plugin *data.Plugin, callArgs []string) []string {
 	result := make([]string, 0)
 	for _, v := range p {
-		v = strings.ReplaceAll(v, "${plugin_starter}", pluginStarter.General.Name)
-		v = strings.ReplaceAll(v, "${plugin_name}", pluginActioner.General.Name)
-		v = strings.ReplaceAll(v, "${plugin_repodir}", pluginActioner.GetRepoDir())
-		v = strings.ReplaceAll(v, "${plugin_datadir}", pluginActioner.GetDataDir())
-		v = strings.ReplaceAll(v, "${plugin_tempdir}", pluginActioner.GetTempDir())
+		v = strings.ReplaceAll(v, "${plugin_starter}", Package.Name)
+		v = strings.ReplaceAll(v, "${plugin_name}", plugin.General.Name)
+		v = strings.ReplaceAll(v, "${plugin_repodir}", plugin.GetRepoDir())
+		v = strings.ReplaceAll(v, "${plugin_datadir}", plugin.GetDataDir())
+		v = strings.ReplaceAll(v, "${plugin_tempdir}", plugin.GetTempDir())
 		v = strings.ReplaceAll(v, "${arg}", strings.Join(callArgs, " "))
 		for i := 0; i < 10; i++ {
 			if len(callArgs) > i {

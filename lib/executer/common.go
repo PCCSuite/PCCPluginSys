@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
 )
 
 type Cmd interface {
@@ -14,7 +14,7 @@ type Cmd interface {
 
 var cmds map[int]Cmd = make(map[int]Cmd)
 
-func send(result data.ExecuterResultData) {
+func send(result common.ExecuterResultData) {
 	raw, err := json.Marshal(result)
 	if err != nil {
 		log.Println("failed to marshal result: ", err)

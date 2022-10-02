@@ -3,10 +3,10 @@ package executer
 import (
 	"log"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/common"
 )
 
-func Stop(stopdata data.ExecuterStopData) {
+func Stop(stopdata common.ExecuterStopData) {
 	cmd, ok := cmds[stopdata.StopId]
 	if !ok {
 		log.Println("Failed to find cmd: ", stopdata.StopId)

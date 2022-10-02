@@ -7,26 +7,23 @@ import (
 	"log"
 	"strings"
 
-	"github.com/PCCSuite/PCCPluginSys/lib/host/plugin"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 )
 
 const CALL = "CALL"
 
 type CallCmd struct {
-	plugin  *plugin.Plugin
+	Package *data.Package
 	param   []string
 	ctx     context.Context
-	cancel  context.CancelFunc
 	running Cmd
 }
 
-func NewCallCmd(plugin *plugin.Plugin, param []string, ctx context.Context) *CallCmd {
-	ctx, cancel := context.WithCancel(ctx)
+func NewCallCmd(Package *data.Package, param []string, ctx context.Context) *CallCmd {
 	return &CallCmd{
-		plugin: plugin,
-		param:  param,
-		ctx:    ctx,
-		cancel: cancel,
+		Package: Package,
+		param:   param,
+		ctx:     ctx,
 	}
 }
 
@@ -34,25 +31,27 @@ var ErrCommandNotFound = errors.New("command not found")
 
 // ErrActionNotFound,ErrStoped throwable
 func (c *CallCmd) Run() error {
-	log.Printf("CALL: plugin: %s, param: %s", c.plugin.General.Name, strings.Join(c.param, " , "))
+	log.Printf("CALL: plugin: %s, param: %s", c.Package.Name, strings.Join(c.param, " , "))
 	if len(c.param) < 1 {
 		return ErrTooFewArgs
 	}
 	splitParam := strings.SplitN(c.param[0], ":", 2)
-	var actionPlugin *plugin.Plugin
+	var plugin *data.Plugin
 	var actionName string
 	if len(splitParam) == 1 {
-		actionPlugin = c.plugin
+		if c.Package.Type != data.PackageTypeInternal {
+			log.Panic("no package CALL by not Internal Package")
+		}
+		plugin = c.Package.Plugin
 		actionName = splitParam[0]
 	} else {
-		var err error
-		actionPlugin, err = plugin.SearchPlugin(splitParam[0])
-		if err != nil {
-			return err
+		plugin = data.GetPlugin(splitParam[0])
+		if plugin == nil {
+			return data.ErrPluginNotFound
 		}
 		actionName = splitParam[1]
 	}
-	rawAction := actionPlugin.GetAction(actionName)
+	rawAction := plugin.GetAction(actionName)
 	splitAction := strings.Split(rawAction, "\n")
 	log.Printf("CALL: splitAction: %s", strings.Join(splitAction, " , "))
 	for i, v := range splitAction {
@@ -78,26 +77,21 @@ func (c *CallCmd) Run() error {
 				return err
 			}
 		}
-		param = replaceParams(param, c.plugin, actionPlugin, c.param[1:])
+		param = replaceParams(param, c.Package, plugin, c.param[1:])
 		switch strings.ToUpper(split[0]) {
 		case CALL:
-			c.running = NewCallCmd(c.plugin, param, c.ctx)
+			c.running = NewCallCmd(c.Package, param, c.ctx)
 		case EXEC:
-			c.running = NewExecCmd(c.plugin, actionPlugin, param, c.ctx)
+			c.running = NewExecCmd(c.Package, plugin, param, c.ctx)
+		case LOCK:
+			c.running = NewLockCmd(c.Package, param, c.ctx)
 		default:
-			return fmt.Errorf("action %s:%s:%d: %w", actionPlugin.General.Name, actionName, i, ErrCommandNotFound)
+			return fmt.Errorf("action %s:%s:%d: %w", plugin.Name, actionName, i, ErrCommandNotFound)
 		}
 		err := c.running.Run()
 		if err != nil {
-			return fmt.Errorf("action %s:%s:%d: %w", actionPlugin.General.Name, actionName, i, err)
+			return fmt.Errorf("action %s:%s:%d: %w", plugin.General.Name, actionName, i, err)
 		}
 	}
 	return nil
-}
-
-func (c *CallCmd) Stop() {
-	c.cancel()
-	if c.running != nil {
-		c.running.Stop()
-	}
 }
