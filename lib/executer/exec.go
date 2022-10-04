@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/common"
 )
@@ -46,6 +47,9 @@ func (c *ExecCmd) run() {
 			return
 		}
 		c.command.Dir = filepath.Dir(executable)
+	}
+	c.command.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow: true,
 	}
 	err = c.command.Start()
 	c.command.Stderr.Write([]byte("EXEC: running " + strings.Join(c.command.Args, " , ") + "\n"))
