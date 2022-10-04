@@ -29,6 +29,7 @@ func SendUpdate() {
 func updateSender() {
 	senderMutex.Lock()
 	for sendQueued {
+		sendQueued = false
 		senderMutex.Unlock()
 		var plugins = make([]PluginData, 0)
 		for _, v := range data.RunningActions {
