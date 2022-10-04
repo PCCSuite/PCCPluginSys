@@ -2,13 +2,13 @@ package executer
 
 import (
 	"log"
-	"os/exec"
-	"strings"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 func GetSystemEnv() []string {
-	machine := getSystemEnvs("Machine")
-	user := getSystemEnvs("User")
+	machine := getSystemEnvs(true)
+	user := getSystemEnvs(false)
 	for k := range user {
 		if k == "Path" {
 			machine[k] = machine[k] + ";" + user[k]
@@ -23,24 +23,34 @@ func GetSystemEnv() []string {
 	return res
 }
 
-func getSystemEnvs(target string) map[string]string {
-	cmd := exec.Command("cmd", "/C", "start", "/B", "/WAIT", "powershell.exe", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive", "[System.Environment]::GetEnvironmentVariables('"+target+"').GetEnumerator() | Select-Object -Property Key,Value | ConvertTo-CSV -NoTypeInformation")
-	output, err := cmd.Output()
-	if err != nil {
-		log.Panic("Failed to get Env from Powershell: ", err)
-	}
+func getSystemEnvs(machine bool) map[string]string {
 	res := map[string]string{}
-	for i, row := range strings.Split(string(output), "\n") {
-		if i == 0 {
-			continue
+	var key registry.Key
+	var err error
+	if machine {
+		key, err = registry.OpenKey(registry.LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment", registry.READ)
+	} else {
+		key, err = registry.OpenKey(registry.CURRENT_USER, "Environment", registry.READ)
+	}
+	if err != nil {
+		log.Panicln("Failed to open registry key: ", err)
+	}
+	values, err := key.ReadValueNames(0)
+	if err != nil {
+		log.Panicln("Failed to read registry values list: ", err)
+	}
+	for _, v := range values {
+		data, valType, err := key.GetStringValue(v)
+		if err != nil {
+			log.Panicln("Failed to get value: ", err)
 		}
-		split := strings.SplitN(row, ",", 2)
-		if len(split) != 2 {
-			break
+		if valType == registry.EXPAND_SZ {
+			data, err = registry.ExpandString(data)
+			if err != nil {
+				log.Panicln("Failed to expand value: ", err)
+			}
 		}
-		key := strings.Trim(split[0], "\"")
-		value := strings.Trim(split[1], "\"")
-		res[key] = value
+		res[v] = data
 	}
 	return res
 }
