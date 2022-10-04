@@ -24,7 +24,7 @@ func GetSystemEnv() []string {
 }
 
 func getSystemEnvs(target string) map[string]string {
-	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "[System.Environment]::GetEnvironmentVariables('"+target+"').GetEnumerator() | Select-Object -Property Key,Value | ConvertTo-CSV -NoTypeInformation")
+	cmd := exec.Command("cmd", "/C", "start", "/min", "powershell.exe", "-WindowStyle", "Hidden", "-NoProfile", "-NonInteractive", "[System.Environment]::GetEnvironmentVariables('"+target+"').GetEnumerator() | Select-Object -Property Key,Value | ConvertTo-CSV -NoTypeInformation")
 	output, err := cmd.Output()
 	if err != nil {
 		log.Panic("Failed to get Env from Powershell: ", err)
