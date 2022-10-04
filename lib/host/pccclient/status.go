@@ -20,7 +20,7 @@ func SendUpdate() {
 	senderMutex.Lock()
 	defer senderMutex.Unlock()
 	sendQueued = true
-	if senderRunning {
+	if !senderRunning {
 		senderRunning = true
 		go updateSender()
 	}
