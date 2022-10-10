@@ -29,6 +29,9 @@ func (c *LockCmd) Run() error {
 	locking := true
 paramcheck:
 	for {
+		if len(param) == 0 {
+			break
+		}
 		switch param[0] {
 		case "/LOCK":
 			param = param[1:]

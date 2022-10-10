@@ -1,0 +1,10 @@
+{
+    "plugins_list": "A:\\PCCPlugin\\plugins.json",
+    "repositories": {
+        "personal": "A:\\PCCPlugin\\repo",
+        "official": "B:\\PCCPlugin\\official_repo",
+        "unofficial": "B:\\PCCPlugin\\unofficial_repo"
+    },
+    "temp_dir": "C:\\Users\\user\\Downloads\\pccplugin",
+    "data_dir": "A:\\PCCPlugin\\data"
+}

@@ -9,6 +9,7 @@ type ExecuterCommand string
 
 const (
 	ExecuterCommandExec ExecuterCommand = "EXEC"
+	ExecuterCommandEnv  ExecuterCommand = "ENV"
 	ExecuterCommandStop ExecuterCommand = "STOP"
 )
 
@@ -35,6 +36,43 @@ func NewExecuterExec(args []string, workDir, logFile string, env []string, reque
 		WorkDir:   workDir,
 		LogFile:   logFile,
 		Env:       env,
+		RequestId: requestId,
+	}
+}
+
+type ExecuterEnvTarget string
+
+const (
+	ExecuterEnvTargetMachine ExecuterEnvTarget = "MACHINE"
+	ExecuterEnvTargetUser    ExecuterEnvTarget = "USER"
+)
+
+type ExecuterEnvMode string
+
+const (
+	ExecuterEnvModeSet       ExecuterEnvMode = "SET"
+	ExecuterEnvModeAdd       ExecuterEnvMode = "ADD"
+	ExecuterEnvModeAddPrefix ExecuterEnvMode = "ADD_PREFIX"
+)
+
+type ExecuterEnvData struct {
+	DataType  DataType          `json:"data_type"`
+	Command   ExecuterCommand   `json:"command"`
+	Target    ExecuterEnvTarget `json:"target"`
+	Mode      ExecuterEnvMode   `json:"mode"`
+	Key       string            `json:"key"`
+	Value     string            `json:"value"`
+	RequestId int               `json:"request_id"`
+}
+
+func NewExecuterEnv(target ExecuterEnvTarget, mode ExecuterEnvMode, key, value string, requestId int) ExecuterEnvData {
+	return ExecuterEnvData{
+		DataType:  DataTypeExecuterCommand,
+		Command:   ExecuterCommandExec,
+		Target:    target,
+		Mode:      mode,
+		Key:       key,
+		Value:     value,
 		RequestId: requestId,
 	}
 }

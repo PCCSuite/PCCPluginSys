@@ -20,9 +20,7 @@ func (p *InstallingPackage) WaitIsSucsess(ctx context.Context) bool {
 	if p.Status.Package.RunningAction.Status == ActionStatusFailed {
 		return false
 	}
-	ch := make(chan ActionStatus)
-	defer close(ch)
-	p.Status.Package.RunningAction.SubscribeStatus(ch)
+	ch := p.Status.Package.RunningAction.SubscribeStatus()
 	defer p.Status.Package.RunningAction.UnsubscribeStatus(ch)
 	for {
 		select {

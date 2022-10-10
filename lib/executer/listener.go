@@ -35,6 +35,14 @@ func listen() {
 				continue
 			}
 			Exec(execdata)
+		case common.ExecuterCommandEnv:
+			envdata := common.ExecuterEnvData{}
+			err = json.Unmarshal(raw, &envdata)
+			if err != nil {
+				log.Print("Error in unmarshaling env message from conn: ", err)
+				continue
+			}
+			go Env(envdata)
 		case common.ExecuterCommandStop:
 			stopdata := common.ExecuterStopData{}
 			err = json.Unmarshal(raw, &stopdata)

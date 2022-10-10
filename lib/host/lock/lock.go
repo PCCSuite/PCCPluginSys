@@ -93,6 +93,12 @@ func Unlock(name string, action *data.RunningAction) {
 	}
 }
 
+func CheckLockAll() {
+	for k := range locks {
+		CheckLock(k)
+	}
+}
+
 func CheckLock(name string) {
 	globalMutex.RLock()
 	lock, ok := locks[name]

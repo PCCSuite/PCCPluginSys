@@ -26,7 +26,7 @@ type RunningAction struct {
 	Status     ActionStatus
 	StatusText string
 	Priority   int
-	Notify     []chan<- ActionStatus
+	notify     []chan ActionStatus
 	Ctx        context.Context
 	Cancel     context.CancelFunc
 }
@@ -37,7 +37,7 @@ func NewRunningAction(packageIdentifier string, status ActionStatus, statusText 
 		Status:            status,
 		StatusText:        statusText,
 		Priority:          priority,
-		Notify:            make([]chan<- ActionStatus, 0),
+		notify:            make([]chan ActionStatus, 0),
 		Ctx:               ctx,
 		Cancel:            cancel,
 	}
@@ -72,7 +72,9 @@ func (r *RunningAction) SetActionStatusText(text string) {
 }
 
 func (r *RunningAction) notifyStatus() {
-	for _, v := range r.Notify {
+	subscribeMuteX.RLock()
+	defer subscribeMuteX.RUnlock()
+	for _, v := range r.notify {
 		v <- r.Status
 	}
 	for _, v := range globalNotify {
@@ -80,24 +82,26 @@ func (r *RunningAction) notifyStatus() {
 	}
 }
 
-var subscribeMuteX sync.Mutex
+var subscribeMuteX = sync.RWMutex{}
 
-func (r *RunningAction) SubscribeStatus(ch chan<- ActionStatus) {
+func (r *RunningAction) SubscribeStatus() <-chan ActionStatus {
 	subscribeMuteX.Lock()
 	defer subscribeMuteX.Unlock()
-	r.Notify = append(r.Notify, ch)
+	ch := make(chan ActionStatus, 1)
+	r.notify = append(r.notify, ch)
+	return ch
 }
 
-func (r *RunningAction) UnsubscribeStatus(ch chan<- ActionStatus) {
+func (r *RunningAction) UnsubscribeStatus(ch <-chan ActionStatus) {
 	subscribeMuteX.Lock()
 	defer subscribeMuteX.Unlock()
-	new := make([]chan<- ActionStatus, len(r.Notify)-1)
-	for _, v := range r.Notify {
-		if v != ch {
-			new = append(new, v)
+	for i, v := range r.notify {
+		if v == ch {
+			close(v)
+			r.notify = append(r.notify[:i], r.notify[i+1:]...)
+			break
 		}
 	}
-	r.Notify = new
 }
 
 var globalNotify []chan<- struct{}

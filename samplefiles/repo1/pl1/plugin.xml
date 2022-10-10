@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- このように囲まれた部分はコメントといって、プログラムに無視されます。
+複数行にも対応しています。
+後の自分や後代のメンテナーに説明を残しましょう。-->
+<plugin>
+    <plugin_xml_version>2</plugin_xml_version>
+    <general>
+        <!--
+            プラグイン名です。必ずフォルダ名と同じにしてください。
+            英大文字、英小文字、数字のみを使うことを推奨します。
+            スラッシュ(/)とコロン(:)は禁止文字です。
+            禁止文字以外は使っても動くと思いますがおすすめしません。
+        -->
+        <name>ExamplePlugin116</name>
+        <!-- プラグインのバージョンです。整数値で指定してください。-->
+        <version>1</version>
+        <description> <!--説明です。この内容はPCCPluginに表示されますので、使い方などを書くといいでしょう。-->
+            プラグインのサンプルです。
+        </description>
+        <plugin_author>pc21509 ozraru</plugin_author> <!--プラグイン作成者を書きます。任意の文字が使用可能です。pc番号を含めて下さい。-->
+        <plugin_licence>PD</plugin_licence> <!--プラグインのライセンスを書きます。特に希望がなければPD(パブリックドメイン)にするといいでしょう。-->
+        <buttons> <!-- ユーザーがプラグインメニューから実行できるアクションを指定します。actionsの同名の処理が実行されます。-->
+            <backup>データをバックアップ</backup> <!-- この場合、PCCClientで「データをバックアップ」ボタンを押すと下で定義されたbackupの処理が実行されます。-->
+        </buttons>
+    </general>
+    <dependency>
+        <!--
+            このプラグインが依存しているパッケージを指定します。
+            外部パッケージプロバイダ(Chocolatey)などによって提供されるパッケージ名を指定することもできます。
+            プラグインの場合はリポジトリを指定する(official:OtherPlugin)こともできますが、別のリポジトリに移動したときに解決できなくなるので非推奨です。
+            リポジトリを省略した場合は、PCCPluginSysに設定されたリポジトリ(デフォルトでpersonal,official,unofficialの順)を上から検索します。
+            before属性をtrueに設定するとそのパッケージのインストール完了までこのパッケージのリストアのactionが実行されません。
+            デフォルト値はfalseです。
+            リストアやインストールに必要ならtrue、リストア自体には不要だが使うときに必要な依存関係にはfalseを指定する(or何も指定しない)ようにしてください。
+        -->
+        <dependent before="true">Chocolatey:python</dependent>
+        <dependent before="false">ExamplePlugin1160000</dependent>
+        <dependent>official:SuperSoftware</dependent>
+    </dependency>
+    <actions>
+        <!-- actionについての詳細は別ページを確認してください。-->
+        <install> <!-- installは特別なactionで、プラグインをユーザー初めてインストールしたとき(データディレクトリがない状態でインストールしようとしたとき)に実行されます。-->
+            EXEC echo Hello, world! > ${plugin_tempdir}
+            CALL restore
+        </install>
+        <restore> <!-- restoreは特別なactionで、PCCClientのリストア時(データディレクトリがある状態でインストールしようとしたとき)に自動実行されます。-->
+            EXEC python ${plugin_repodir}\restore.py
+        </restore>
+        <external> <!-- externalは特別なactionで、これが存在するプラグインは外部パッケージプロバイダとして動作します。詳細は別ページを確認してください。-->
+            EXEC yay -Syu ${args}
+        </external>
+    </actions>
+    <config>
+        <!--
+            このプラグインの設定項目を指定します。
+            ここに記入された項目はユーザーがPCCClientから設定することができます。
+            設定された内容は${plugin_datadir}\plugin_config.jsonに保存されます。
+            idはjsonのキーを指します。
+            typeはstring,password,int,checkboxが指定できます。
+            passwordを指定しても暗号化などはされず平文で保存されます。
+        -->
+        <input id="username" type="string" hint="tsXXXXX">ユーザー名</input>
+        <input id="password" type="password" hint="password">パスワード</input>
+    </config>
+</plugin>

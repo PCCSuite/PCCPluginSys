@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,34 +14,21 @@ import (
 
 const EXEC = "EXEC"
 
-var ExecuterUserConn *net.TCPConn
-var ExecuterAdminConn *net.TCPConn
-
-var Process map[int]chan<- *common.ExecuterResultData = make(map[int]chan<- *common.ExecuterResultData)
-
-var lastNum int
-
 type ExecCmd struct {
 	Package *data.Package
 	plugin  *data.Plugin
 	param   []string
 	ctx     context.Context
-	cancel  context.CancelFunc
-	child   Cmd
 }
 
 func NewExecCmd(Package *data.Package, plugin *data.Plugin, param []string, ctx context.Context) *ExecCmd {
-	ctx, cancel := context.WithCancel(ctx)
 	return &ExecCmd{
 		Package: Package,
 		plugin:  plugin,
 		param:   param,
 		ctx:     ctx,
-		cancel:  cancel,
 	}
 }
-
-var ErrNonZeroCode = errors.New("exec return non zero code")
 
 // ErrActionNotFound,ErrStoped throwable
 func (c *ExecCmd) Run() error {
@@ -111,8 +97,7 @@ paramcheck:
 			network = true
 		}
 		if network {
-			c.child = NewExecCmd(c.Package, c.plugin, []string{"robocopy", abs, c.plugin.GetTempDir()}, c.ctx)
-			err = c.child.Run()
+			err = exec(c.plugin, c.Package, false, false, []string{"copy", abs, c.plugin.GetTempDir()}, dir, c.ctx)
 			if err != nil {
 				return err
 			}
@@ -122,7 +107,7 @@ paramcheck:
 
 	if !noauto {
 		if strings.HasSuffix(param[0], ".ps1") {
-			param = append([]string{"powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Unrestricted", "-File"}, param...)
+			param = append([]string{"powershell.exe", "-NonInteractive", "-ExecutionPolicy", "Unrestricted", "-File"}, param...)
 		}
 	}
 
@@ -134,27 +119,27 @@ paramcheck:
 	}
 
 	// Execution
-	lastNum++
-	reqId := lastNum
+	return exec(c.plugin, c.Package, admin, nofail, param, dir, c.ctx)
+}
+
+var ErrNonZeroCode = errors.New("exec return non zero code")
+
+func exec(plugin *data.Plugin, Package *data.Package, admin bool, nofail bool, param []string, dir string, ctx context.Context) error {
+	reqId, ch := newRequest()
+	defer unlisten(reqId)
 	env := []string{
-		"PLUGIN_STARTER=" + c.Package.Name,
-		"PLUGIN_NAME=" + c.plugin.General.Name,
-		"PLUGIN_REPODIR=" + c.plugin.GetRepoDir(),
-		"PLUGIN_DATADIR=" + c.plugin.GetDataDir(),
-		"PLUGIN_TEMPDIR=" + c.plugin.GetTempDir(),
+		"PLUGIN_STARTER=" + Package.Name,
+		"PLUGIN_NAME=" + plugin.General.Name,
+		"PLUGIN_REPODIR=" + plugin.GetRepoDir(),
+		"PLUGIN_DATADIR=" + plugin.GetDataDir(),
+		"PLUGIN_TEMPDIR=" + plugin.GetTempDir(),
 	}
-	logFile := filepath.Join(filepath.Join(c.plugin.GetTempDir(), "executer.log"))
+	logFile := filepath.Join(plugin.GetTempDir(), "executer.log")
 	reqData := common.NewExecuterExec(param, dir, logFile, env, reqId)
 	raw, err := json.Marshal(reqData)
 	if err != nil {
 		return err
 	}
-	ch := make(chan *common.ExecuterResultData)
-	defer close(ch)
-	Process[reqId] = ch
-	defer func() {
-		Process[reqId] = nil
-	}()
 	if admin {
 		_, err = ExecuterAdminConn.Write(raw)
 	} else {
@@ -169,7 +154,7 @@ paramcheck:
 			return ErrNonZeroCode
 		}
 		return nil
-	case <-c.ctx.Done():
+	case <-ctx.Done():
 		stopData := common.NewExecuterStop(reqId)
 		raw, err := json.Marshal(stopData)
 		if err != nil {

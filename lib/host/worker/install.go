@@ -173,6 +173,7 @@ func start(p *data.InstallingPackage) {
 	if err != nil {
 		return
 	}
+	p.Status.SetActionStatusBoth(data.ActionStatusRunning, "")
 	var newInstall bool
 	if p.Status.Package.Type != data.PackageTypeExternal {
 		p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Checking directories")
@@ -191,16 +192,16 @@ func start(p *data.InstallingPackage) {
 			return
 		}
 	}
-	var action string
+	var callParam []string
 	if p.Status.Package.Type == data.PackageTypeExternal {
-		action = data.ActionExternal
+		callParam = []string{p.Status.Package.Plugin.Name + ":" + data.ActionExternal, p.Status.Package.Name}
 	} else if newInstall {
-		action = data.ActionNewInstall
+		callParam = []string{data.ActionNewInstall}
 	} else {
-		action = data.ActionRestore
+		callParam = []string{data.ActionRestore}
 	}
-	p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Running action: "+action)
-	call := cmd.NewCallCmd(p.Status.Package, []string{action}, p.Status.Ctx)
+	p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Running action: "+callParam[0])
+	call := cmd.NewCallCmd(p.Status.Package, callParam, p.Status.Ctx)
 	err = call.Run()
 	if err != nil {
 		p.Status.SetActionStatusBoth(data.ActionStatusFailed, "Error: "+err.Error())

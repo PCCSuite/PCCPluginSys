@@ -22,7 +22,7 @@ func HostMain() {
 	status.SetStatus(status.SysStatusReady)
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
+	signal.Notify(sig)
 
 	s := <-sig
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -90,4 +91,17 @@ func replaceParams(p []string, Package *data.Package, plugin *data.Plugin, callA
 		}
 	}
 	return result
+}
+
+func ToCmd(Package *data.Package, plugin *data.Plugin, name string, param []string, ctx context.Context) (Cmd, error) {
+	switch strings.ToUpper(name) {
+	case CALL:
+		return NewCallCmd(Package, param, ctx), nil
+	case EXEC:
+		return NewExecCmd(Package, plugin, param, ctx), nil
+	case LOCK:
+		return NewLockCmd(Package, param, ctx), nil
+	default:
+		return nil, ErrCommandNotFound
+	}
 }

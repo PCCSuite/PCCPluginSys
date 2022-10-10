@@ -21,7 +21,7 @@ var Plugins []*Plugin = make([]*Plugin, 0)
 
 type Plugin struct {
 	*Package
-	xml_version int              `xml:"plugin_xml_version"`
+	Xml_version int              `xml:"plugin_xml_version"`
 	General     PluginGeneral    `xml:"general"`
 	Dependency  PluginDependency `xml:"dependency"`
 	Actions     PluginActions    `xml:"actions"`

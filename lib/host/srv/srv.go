@@ -60,5 +60,7 @@ func newConn(clientType common.ClientType, conn *net.TCPConn) {
 		go listenExecuter(conn, true)
 	case common.PCCClient:
 		go pccclient.PCCCliListener(conn)
+	case common.API:
+		go listenApi(conn)
 	}
 }
