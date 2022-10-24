@@ -21,7 +21,9 @@ type ExecCmd struct {
 func Exec(cmddata common.ExecuterExecData) {
 	cmd := exec.Command("cmd.exe", append([]string{"/C"}, cmddata.Args...)...)
 	cmd.Dir = cmddata.WorkDir
-	cmd.Env = append(GetSystemEnv(), cmddata.Env...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, GetSystemEnv()...)
+	cmd.Env = append(cmd.Env, cmddata.Env...)
 	execcmd := ExecCmd{
 		requestId: cmddata.RequestId,
 		logPath:   cmddata.LogFile,
