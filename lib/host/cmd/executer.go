@@ -10,25 +10,25 @@ import (
 var ExecuterUserConn *net.TCPConn
 var ExecuterAdminConn *net.TCPConn
 
-var Process map[int]chan<- *common.ExecuterResultData = make(map[int]chan<- *common.ExecuterResultData)
+var ExecProcess map[int]chan<- *common.ExecuterResultData = make(map[int]chan<- *common.ExecuterResultData)
 
-var lastNum int
+var lastExecNum int
 
-var mutex sync.Mutex
+var ExecMutex sync.RWMutex
 
-func newRequest() (int, <-chan *common.ExecuterResultData) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	lastNum++
+func newExecRequest() (int, <-chan *common.ExecuterResultData) {
+	ExecMutex.Lock()
+	defer ExecMutex.Unlock()
+	lastExecNum++
 	ch := make(chan *common.ExecuterResultData)
-	Process[lastNum] = ch
-	return lastNum, ch
+	ExecProcess[lastExecNum] = ch
+	return lastExecNum, ch
 }
 
-func unlisten(requestId int) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	ch := Process[requestId]
-	Process[requestId] = nil
+func execUnlisten(requestId int) {
+	ExecMutex.Lock()
+	defer ExecMutex.Unlock()
+	ch := ExecProcess[requestId]
+	ExecProcess[requestId] = nil
 	close(ch)
 }

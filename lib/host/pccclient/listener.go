@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/status"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/worker"
@@ -32,21 +33,35 @@ func PCCCliListener(conn *net.TCPConn) {
 			log.Print("Error reading PCCClient message: ", err)
 			break
 		}
-		data := CommandData{}
-		json.Unmarshal(raw, &data)
-		switch data.Data_type {
+		cmdData := CommandData{}
+		json.Unmarshal(raw, &cmdData)
+		switch cmdData.Data_type {
 		case DataTypeRestore:
 			worker.Restore()
 		case DataTypeInstall:
-			data := InstallCommandData{}
-			json.Unmarshal(raw, &data)
-			worker.InstallPackage(data.Plugin, 0)
+			cmdData := InstallCommandData{}
+			json.Unmarshal(raw, &cmdData)
+			worker.InstallPackage(cmdData.Package, 0)
 		case DataTypeAction:
-			data := ActionCommandData{}
-			json.Unmarshal(raw, &data)
-			worker.RunAction(data.Plugin, data.Action, 0, context.Background())
+			cmdData := ActionCommandData{}
+			json.Unmarshal(raw, &cmdData)
+			worker.RunAction(cmdData.Plugin, cmdData.Action, 0, context.Background())
+		case DataTypeCancel:
+			cmdData := CancelCommandData{}
+			json.Unmarshal(raw, &cmdData)
+			running, ok := data.RunningActions[cmdData.Package]
+			if ok {
+				running.Cancel()
+			}
+		case DataTypeAnswer:
+			cmdData := AnswerCommandData{}
+			json.Unmarshal(raw, &cmdData)
+			askData, ok := cmd.Asking[cmdData.ID]
+			if ok {
+				askData.Ch <- cmdData.Value
+			}
 		default:
-			log.Print("Unknown datatype from pccclient: ", data.Data_type)
+			log.Print("Unknown datatype from pccclient: ", cmdData.Data_type)
 		}
 	}
 }

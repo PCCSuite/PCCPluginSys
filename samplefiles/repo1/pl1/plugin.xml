@@ -56,7 +56,7 @@
             ここに記入された項目はユーザーがPCCClientから設定することができます。
             設定された内容は${plugin_datadir}\plugin_config.jsonに保存されます。
             idはjsonのキーを指します。
-            typeはstring,password,int,checkboxが指定できます。
+            typeはstring,password,int,boolが指定できます。
             passwordを指定しても暗号化などはされず平文で保存されます。
         -->
         <input id="username" type="string" hint="tsXXXXX">ユーザー名</input>

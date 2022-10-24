@@ -65,8 +65,10 @@ func listenExecuter(conn *net.TCPConn, admin bool) {
 			log.Print("Error in unmarshaling message from executer: ", err)
 			continue
 		}
-		if cmd.Process[data.Request_id] != nil {
-			cmd.Process[data.Request_id] <- &data
+		cmd.ExecMutex.RLock()
+		if cmd.ExecProcess[data.Request_id] != nil {
+			cmd.ExecProcess[data.Request_id] <- &data
 		}
+		cmd.ExecMutex.RUnlock()
 	}
 }

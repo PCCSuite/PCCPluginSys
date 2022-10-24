@@ -101,6 +101,8 @@ func ToCmd(Package *data.Package, plugin *data.Plugin, name string, param []stri
 		return NewExecCmd(Package, plugin, param, ctx), nil
 	case LOCK:
 		return NewLockCmd(Package, param, ctx), nil
+	case ASK:
+		return NewAskCmd(Package, plugin, param, ctx), nil
 	default:
 		return nil, ErrCommandNotFound
 	}

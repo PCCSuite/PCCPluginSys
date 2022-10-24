@@ -8,11 +8,11 @@ import (
 type ActionStatus string
 
 const (
-	ActionStatusLoaded     ActionStatus = "loaded"
 	ActionStatusWaitStart  ActionStatus = "wait_start"
 	ActionStatusRunning    ActionStatus = "running"
 	ActionStatusWaitDepend ActionStatus = "wait_depend"
 	ActionStatusWaitLock   ActionStatus = "wait_lock"
+	ActionStatusWaitAsk    ActionStatus = "wait_ask"
 	ActionStatusDone       ActionStatus = "done"
 	ActionStatusFailed     ActionStatus = "failed"
 )

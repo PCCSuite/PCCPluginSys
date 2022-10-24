@@ -79,8 +79,8 @@ paramcheck:
 	default:
 	}
 
-	reqId, ch := newRequest()
-	defer unlisten(reqId)
+	reqId, ch := newExecRequest()
+	defer execUnlisten(reqId)
 
 	reqData := common.NewExecuterEnv(target, mode, key, value, reqId)
 	raw, err := json.Marshal(reqData)

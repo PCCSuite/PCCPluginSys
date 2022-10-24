@@ -125,8 +125,8 @@ paramcheck:
 var ErrNonZeroCode = errors.New("exec return non zero code")
 
 func exec(plugin *data.Plugin, Package *data.Package, admin bool, nofail bool, param []string, dir string, ctx context.Context) error {
-	reqId, ch := newRequest()
-	defer unlisten(reqId)
+	reqId, ch := newExecRequest()
+	defer execUnlisten(reqId)
 	env := []string{
 		"PLUGIN_STARTER=" + Package.Name,
 		"PLUGIN_NAME=" + plugin.General.Name,

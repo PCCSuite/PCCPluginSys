@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/status"
 )
@@ -46,7 +47,13 @@ func updateSender() {
 				plugins = append(plugins, NewPluginData(v.PackageIdentifier, "", false, false, v.Status, v.StatusText, []string{}))
 			}
 		}
-		data := NewClientNotifyData(status.Status, plugins)
+		var asking = make([]*cmd.AskData, 0)
+		cmd.AskMutex.RLock()
+		for _, v := range cmd.Asking {
+			asking = append(asking, v)
+		}
+		cmd.AskMutex.RUnlock()
+		data := NewClientNotifyData(status.Status, plugins, asking)
 		raw, err := json.Marshal(data)
 		if err != nil {
 			log.Print("Failed to marshal client notify: ", err)
