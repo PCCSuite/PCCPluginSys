@@ -11,6 +11,7 @@ import (
 
 	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/lock"
 )
 
 var starterRunning bool
@@ -68,8 +69,6 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 				Package = plugin.Package
 			}
 		}
-		ctx, cancel := context.WithCancel(context.Background())
-		status = data.NewRunningAction(packageIdentifier, data.ActionStatusRunning, "", priority, ctx, cancel)
 	}
 
 	// if package already loaded
@@ -83,6 +82,9 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 	//
 	// Start install
 	//
+
+	ctx, cancel := context.WithCancel(context.Background())
+	status = data.NewRunningAction(packageIdentifier, data.ActionStatusRunning, "", priority, ctx, cancel)
 
 	installing := &data.InstallingPackage{
 		Status:    status,
@@ -203,6 +205,7 @@ func start(p *data.InstallingPackage) {
 	p.Status.SetActionStatusBoth(data.ActionStatusRunning, "Running action: "+callParam[0])
 	call := cmd.NewCallCmd(p.Status.Package, callParam, p.Status.Ctx)
 	err = call.Run()
+	lock.UnlockAll(p.Status)
 	if err != nil {
 		p.Status.SetActionStatusBoth(data.ActionStatusFailed, "Error: "+err.Error())
 		return

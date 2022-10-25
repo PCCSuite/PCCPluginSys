@@ -7,6 +7,7 @@ import (
 
 	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/lock"
 )
 
 var ErrNotInstalled = errors.New("data not installed")
@@ -29,6 +30,7 @@ func RunAction(pluginName string, action string, priority int, ctx context.Conte
 	pl.RunningAction.SetActionStatusBoth(data.ActionStatusRunning, "Running action: "+action)
 	call := cmd.NewCallCmd(pl.Package, []string{action}, ctx)
 	err := call.Run()
+	lock.UnlockAll(pl.RunningAction)
 	if err != nil {
 		pl.RunningAction.SetActionStatusBoth(data.ActionStatusFailed, "Error: "+err.Error())
 	} else {

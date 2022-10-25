@@ -33,7 +33,12 @@ func (c *AskCmd) Run() error {
 	if len(c.param) < 1 {
 		return ErrTooFewArgs
 	}
-	req, ch := newAskRequest(c.Package.Name, c.plugin.Name, c.param[0], strings.Join(c.param[1:], " "))
+	select {
+	case <-c.ctx.Done():
+		return ErrStopped
+	default:
+	}
+	req, ch := newAskRequest(c.Package.RunningAction.PackageIdentifier, c.plugin.Name, c.param[0], strings.Join(c.param[1:], " "))
 	defer askUnlisten(req.ID)
 	c.Package.RunningAction.SetActionStatusOnly(data.ActionStatusWaitAsk)
 	select {

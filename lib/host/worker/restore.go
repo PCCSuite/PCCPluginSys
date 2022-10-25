@@ -12,9 +12,9 @@ func Restore() {
 	data.ReadPluginList()
 	for _, v := range data.PluginList.Plugins {
 		if v.Enabled {
-			_, err := InstallPackage(v.Name, v.Priority)
+			_, err := InstallPackage(v.Identifier, v.Priority)
 			if err != nil {
-				log.Printf("Failed to install %s: %v", v.Name, err)
+				log.Printf("Failed to install %s: %v", v.Identifier, err)
 			}
 		}
 	}

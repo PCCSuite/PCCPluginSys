@@ -8,6 +8,7 @@ import (
 
 	"github.com/PCCSuite/PCCPluginSys/lib/host/cmd"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/lock"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/status"
 )
 
@@ -42,7 +43,7 @@ func updateSender() {
 						dependency = append(dependency, d.Status.Status.PackageIdentifier)
 					}
 				}
-				plugins = append(plugins, NewPluginData(v.PackageIdentifier, v.Package.Repo.Name, v.Package.Installed, false, v.Status, v.StatusText, dependency))
+				plugins = append(plugins, NewPluginData(v.PackageIdentifier, v.Package.Repo.Name, v.Package.Installed, lock.IsLocking(lock.DefaultName, v), v.Status, v.StatusText, dependency))
 			} else {
 				plugins = append(plugins, NewPluginData(v.PackageIdentifier, "", false, false, v.Status, v.StatusText, []string{}))
 			}

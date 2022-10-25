@@ -1,1 +1,1 @@
-GOOS=windows go build -ldflags=all='-H windowsgui' .
+GOOS=windows go build -trimpath -ldflags=all='-H windowsgui' .

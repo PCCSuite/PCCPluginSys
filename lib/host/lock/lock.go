@@ -44,12 +44,12 @@ func RequestLock(name string, action *data.RunningAction) *requester {
 	globalMutex.RUnlock()
 	if !ok {
 		globalMutex.Lock()
-		mutex := &sync.RWMutex{}
-		locks[name] = &Lock{
-			mutex:    mutex,
+		lock = &Lock{
+			mutex:    &sync.RWMutex{},
 			have:     nil,
 			requests: []*requester{},
 		}
+		locks[name] = lock
 		globalMutex.Unlock()
 	}
 	lock.mutex.Lock()
@@ -91,6 +91,32 @@ func Unlock(name string, action *data.RunningAction) {
 			return
 		}
 	}
+}
+
+func UnlockAll(action *data.RunningAction) {
+	globalMutex.RLock()
+	defer globalMutex.RUnlock()
+	for _, lock := range locks {
+		lock.mutex.RLock()
+		for i, v := range lock.requests {
+			if v.action == action {
+				lock.mutex.RUnlock()
+				lock.mutex.Lock()
+				lock.requests = append(lock.requests[:i], lock.requests[i+1:]...)
+				lock.mutex.Unlock()
+				lock.mutex.RLock()
+				select {
+				case <-v.ch:
+				default:
+					v.Err = ErrCancelled
+					close(v.ch)
+				}
+				break
+			}
+		}
+		lock.mutex.RUnlock()
+	}
+	go CheckLockAll()
 }
 
 func CheckLockAll() {
@@ -136,4 +162,19 @@ func CheckLock(name string) {
 	})
 	lock.have = lock.requests[0]
 	close(lock.have.ch)
+}
+
+func IsLocking(name string, action *data.RunningAction) bool {
+	globalMutex.RLock()
+	lock, ok := locks[name]
+	globalMutex.RUnlock()
+	if !ok {
+		return false
+	}
+	lock.mutex.RLock()
+	defer lock.mutex.RUnlock()
+	if lock.have == nil {
+		return false
+	}
+	return lock.have.action == action
 }

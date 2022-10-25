@@ -11,10 +11,10 @@ import (
 
 var PluginList pluginList = pluginList{
 	Plugins: []pluginListed{
-		pluginListed{
-			Name:     "ExamplePluginName",
-			Priority: 100,
-			Enabled:  false,
+		{
+			Identifier: "ExamplePluginName",
+			Priority:   100,
+			Enabled:    false,
 		},
 	},
 }
@@ -24,9 +24,9 @@ type pluginList struct {
 }
 
 type pluginListed struct { // plugins.jsonに指定される、リストア対象のplugin
-	Name     string `json:"name"`
-	Priority int    `json:"priority"`
-	Enabled  bool   `json:"enabled"`
+	Identifier string `json:"identifier"`
+	Priority   int    `json:"priority"`
+	Enabled    bool   `json:"enabled"`
 }
 
 func ReadPluginList() error {

@@ -50,8 +50,10 @@ paramcheck:
 	}
 	if locking {
 		req := lock.RequestLock(name, c.Package.RunningAction)
+		c.Package.RunningAction.SetActionStatusOnly(data.ActionStatusWaitLock)
 		select {
 		case <-req.Ch:
+			c.Package.RunningAction.SetActionStatusOnly(data.ActionStatusRunning)
 			return req.Err
 		case <-c.ctx.Done():
 			return ErrStopped
