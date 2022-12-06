@@ -13,21 +13,23 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+var ExecutablePath string
+
 func StartExecuters() {
-	execPath := copyBinary()
-	go startUserExecuter(execPath)
-	startAdminExecuter(execPath)
+	copyBinary()
+	go startUserExecuter()
+	startAdminExecuter()
 }
 
-func copyBinary() string {
+func copyBinary() {
 	executable, err := os.Executable()
 	if err != nil {
 		log.Fatal("Failed to get executable: ", err)
 	}
 
-	destPath := filepath.Join(config.Config.TempDir, filepath.Base(executable))
+	ExecutablePath = filepath.Join(config.Config.TempDir, filepath.Base(executable))
 
-	dest, err := os.Create(destPath)
+	dest, err := os.Create(ExecutablePath)
 	if err != nil {
 		log.Fatal("Failed to create dest exec file: ", err)
 	}
@@ -51,10 +53,9 @@ func copyBinary() string {
 	if err != nil {
 		log.Fatal("Failed close dest exec file: ", err)
 	}
-	return destPath
 }
 
-func startUserExecuter(execPath string) {
+func startUserExecuter() {
 	logFile, err := os.Create(filepath.Join(config.Config.TempDir, "executer-user.log"))
 	if err != nil {
 		log.Fatal("Failed to open exec-user log file: ", err)
@@ -62,7 +63,7 @@ func startUserExecuter(execPath string) {
 	for {
 		log.Print("Starting executer-user")
 		// start executer-user
-		proc := exec.Command(execPath, "executer-user")
+		proc := exec.Command(ExecutablePath, "executer-user")
 		proc.Stdout = logFile
 		proc.Stderr = proc.Stdout
 		proc.Run()
@@ -71,12 +72,12 @@ func startUserExecuter(execPath string) {
 	}
 }
 
-func startAdminExecuter(execPath string) {
+func startAdminExecuter() {
 	verb := "runas"
 	args := "executer-admin"
 
 	verbPtr, _ := syscall.UTF16PtrFromString(verb)
-	exePtr, _ := syscall.UTF16PtrFromString(execPath)
+	exePtr, _ := syscall.UTF16PtrFromString(ExecutablePath)
 	cwdPtr, _ := syscall.UTF16PtrFromString(config.Config.TempDir)
 	argPtr, _ := syscall.UTF16PtrFromString(args)
 

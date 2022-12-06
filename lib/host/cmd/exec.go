@@ -10,6 +10,7 @@ import (
 
 	"github.com/PCCSuite/PCCPluginSys/lib/common"
 	"github.com/PCCSuite/PCCPluginSys/lib/host/data"
+	"github.com/PCCSuite/PCCPluginSys/lib/host/subp"
 )
 
 const EXEC = "EXEC"
@@ -133,6 +134,7 @@ func exec(plugin *data.Plugin, Package *data.Package, admin bool, nofail bool, p
 		"PLUGIN_REPODIR=" + plugin.GetRepoDir(),
 		"PLUGIN_DATADIR=" + plugin.GetDataDir(),
 		"PLUGIN_TEMPDIR=" + plugin.GetTempDir(),
+		"PLUGIN_SYS=" + subp.ExecutablePath,
 	}
 	logFile := filepath.Join(plugin.GetTempDir(), "executer.log")
 	reqData := common.NewExecuterExec(param, dir, logFile, env, reqId)
