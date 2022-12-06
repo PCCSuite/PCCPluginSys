@@ -108,7 +108,7 @@ paramcheck:
 
 	if !noauto {
 		if strings.HasSuffix(param[0], ".ps1") {
-			param = append([]string{"powershell.exe", "-NonInteractive", "-ExecutionPolicy", "Unrestricted", "-File"}, param...)
+			param = append([]string{"powershell.exe", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"}, param...)
 		}
 	}
 
