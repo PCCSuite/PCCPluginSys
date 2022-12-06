@@ -68,7 +68,7 @@ type ExecuterEnvData struct {
 func NewExecuterEnv(target ExecuterEnvTarget, mode ExecuterEnvMode, key, value string, requestId int) ExecuterEnvData {
 	return ExecuterEnvData{
 		DataType:  DataTypeExecuterCommand,
-		Command:   ExecuterCommandExec,
+		Command:   ExecuterCommandEnv,
 		Target:    target,
 		Mode:      mode,
 		Key:       key,

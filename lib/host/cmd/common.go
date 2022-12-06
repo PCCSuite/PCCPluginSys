@@ -97,6 +97,8 @@ func ToCmd(Package *data.Package, plugin *data.Plugin, name string, param []stri
 	switch strings.ToUpper(name) {
 	case CALL:
 		return NewCallCmd(Package, param, ctx), nil
+	case ENV:
+		return NewEnvCmd(Package, plugin, param, ctx), nil
 	case EXEC:
 		return NewExecCmd(Package, plugin, param, ctx), nil
 	case LOCK:

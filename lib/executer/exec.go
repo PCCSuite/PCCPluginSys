@@ -36,7 +36,7 @@ func Exec(cmddata common.ExecuterExecData) {
 func (c *ExecCmd) run() {
 	logFile, err := os.OpenFile(c.logPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
-		log.Print("Failed to open log file")
+		log.Print("Failed to open log file: ", err)
 		send(common.NewExecuterResult(-1, c.requestId))
 	}
 	defer logFile.Close()
