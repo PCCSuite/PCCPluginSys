@@ -23,62 +23,64 @@ var ErrInstalledOtherRepo = errors.New("plugin already installed from other repo
 var ErrRepoAlreadyExist = errors.New("same name repository already exists")
 
 func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPackage, error) {
-	var Package *data.Package
-	var packageName string
 	var repoName string
 	var repo *data.Repository
+	var packageName string
+	{
 
-	//
-	// Check package already installing and parse identifier
-	//
+		//
+		// Check package already installing and parse identifier
+		//
 
-	status, ok := data.RunningActions[packageIdentifier]
+		status, ok := data.RunningActions[packageIdentifier]
 
-	if ok {
-		Package = status.Package
-	}
-
-	if Package != nil {
-		packageName = status.Package.Name
-		repoName = status.Package.Repo.Name
-		repo = status.Package.Repo
-	} else {
-		if splitName := strings.SplitN(packageIdentifier, ":", 2); len(splitName) == 1 {
-			packageName = packageIdentifier
-		} else {
-			repoName = splitName[0]
-			packageName = splitName[1]
+		var Package *data.Package
+		if ok {
+			Package = status.Package
 		}
-		if repoName != "" {
-			repo = data.Repositories[repoName]
-			if repo == nil || repo.Type == data.RepositoryTypeExternal {
-				// external repo
-				Package = data.GetExternalPackage(repoName, packageName)
+
+		if Package != nil {
+			packageName = status.Package.Name
+			repoName = status.Package.Repo.Name
+			repo = status.Package.Repo
+		} else {
+			if splitName := strings.SplitN(packageIdentifier, ":", 2); len(splitName) == 1 {
+				packageName = packageIdentifier
 			} else {
-				// internal repo
+				repoName = splitName[0]
+				packageName = splitName[1]
+			}
+			if repoName != "" {
+				repo = data.Repositories[repoName]
+				if repo == nil || repo.Type == data.RepositoryTypeExternal {
+					// external repo
+					Package = data.GetExternalPackage(repoName, packageName)
+				} else {
+					// internal repo
+					plugin := data.GetPlugin(packageName)
+					if plugin != nil {
+						Package = plugin.Package
+						if (Package.Installed || !Package.RunningAction.IsEnded()) && Package.Repo.Name != repoName {
+							status.SetActionStatusBoth(data.ActionStatusFailed, "already instaled from other repository")
+							return nil, ErrInstalledOtherRepo
+						}
+					}
+				}
+			} else {
+				// repo is not specify
 				plugin := data.GetPlugin(packageName)
 				if plugin != nil {
 					Package = plugin.Package
-					if (Package.Installed || !Package.RunningAction.IsEnded()) && Package.Repo.Name != repoName {
-						status.SetActionStatusBoth(data.ActionStatusFailed, "already instaled from other repository")
-						return nil, ErrInstalledOtherRepo
-					}
 				}
 			}
-		} else {
-			// repo is not specify
-			plugin := data.GetPlugin(packageName)
-			if plugin != nil {
-				Package = plugin.Package
-			}
 		}
-	}
 
-	// if package already loaded
-	if Package != nil {
-		installing, ok := data.InstallingPackages[Package]
-		if ok && installing.Status.Status != data.ActionStatusFailed {
-			return installing, nil
+		// if package already loaded
+		if Package != nil {
+			installing, ok := data.InstallingPackages[Package]
+			if ok && installing.Status.Status != data.ActionStatusFailed {
+				return installing, nil
+			}
 		}
 	}
 
@@ -86,8 +88,10 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 	// Start install
 	//
 
+	var Package *data.Package
+
 	ctx, cancel := context.WithCancel(context.Background())
-	status = data.NewRunningAction(packageIdentifier, data.ActionStatusRunning, "", priority, ctx, cancel)
+	status := data.NewRunningAction(packageIdentifier, data.ActionStatusRunning, "", priority, ctx, cancel)
 
 	installing := &data.InstallingPackage{
 		Status:    status,
@@ -115,7 +119,7 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 			if errors.Is(err, data.ErrPluginNotFound) {
 				status.SetActionStatusBoth(data.ActionStatusFailed, "plugin not found")
 			} else {
-				status.SetActionStatusBoth(data.ActionStatusFailed, "load failed")
+				status.SetActionStatusBoth(data.ActionStatusFailed, "load failed: "+err.Error())
 			}
 			return installing, err
 		}
