@@ -11,6 +11,8 @@ type InstallingPackage struct {
 }
 
 func (p *InstallingPackage) WaitIsSucsess(ctx context.Context) bool {
+	ch := p.Status.Package.RunningAction.SubscribeStatus()
+	defer p.Status.Package.RunningAction.UnsubscribeStatus(ch)
 	if p.Status.Package == nil {
 		return false
 	}
@@ -20,8 +22,6 @@ func (p *InstallingPackage) WaitIsSucsess(ctx context.Context) bool {
 	if p.Status.Package.RunningAction.Status == ActionStatusFailed {
 		return false
 	}
-	ch := p.Status.Package.RunningAction.SubscribeStatus()
-	defer p.Status.Package.RunningAction.UnsubscribeStatus(ch)
 	for {
 		select {
 		case status := <-ch:
