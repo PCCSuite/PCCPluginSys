@@ -102,6 +102,11 @@ func GetPlugin(name string) *Plugin {
 }
 
 func LoadPlugin(repo *Repository, name string) (*Plugin, error) {
+	for _, v := range Plugins {
+		if v.Name == name && v.Repo == repo {
+			return v, nil
+		}
+	}
 	path := filepath.Join(repo.Directory, name)
 	_, err := os.Stat(path)
 	if err != nil {
