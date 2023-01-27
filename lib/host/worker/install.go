@@ -74,7 +74,7 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 	// if package already loaded
 	if Package != nil {
 		installing, ok := data.InstallingPackages[Package]
-		if ok && !installing.IsEnded() {
+		if ok && installing.Status.Status != data.ActionStatusFailed {
 			return installing, nil
 		}
 	}
