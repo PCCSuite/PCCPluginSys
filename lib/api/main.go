@@ -22,6 +22,18 @@ func ApiMain() {
 	if err != nil {
 		log.Fatal("Failed to send request: ", err)
 	}
+	result := common.ApiResultData{}
+	buf := make([]byte, 8192)
+	i, err := Conn.Read(buf)
+	if err != nil {
+		log.Fatal("Failed to read result: ", err)
+	}
+	err = json.Unmarshal(buf[:i], &result)
+	if err != nil {
+		log.Fatal("Failed to unmarshal result data: ", err)
+	}
+	log.Print(result.Message)
+	os.Exit(result.Code)
 }
 
 func connect() {
