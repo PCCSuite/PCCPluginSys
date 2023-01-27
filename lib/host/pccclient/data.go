@@ -41,10 +41,11 @@ type PluginData struct {
 	Locking    bool              `json:"locking"`
 	Status     data.ActionStatus `json:"status"`
 	StatusText string            `json:"status_text"`
+	Priority   int               `json:"priority"`
 	Dependency []string          `json:"dependency"`
 }
 
-func NewPluginData(name, repository string, installed, locking bool, status data.ActionStatus, statusText string, dependency []string) PluginData {
+func NewPluginData(name, repository string, installed, locking bool, status data.ActionStatus, statusText string, priority int, dependency []string) PluginData {
 	return PluginData{
 		Identifier: name,
 		Repository: repository,
@@ -52,6 +53,7 @@ func NewPluginData(name, repository string, installed, locking bool, status data
 		Locking:    locking,
 		Status:     status,
 		StatusText: statusText,
+		Priority:   priority,
 		Dependency: dependency,
 	}
 }

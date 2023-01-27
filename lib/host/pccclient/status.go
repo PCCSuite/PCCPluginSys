@@ -43,9 +43,9 @@ func updateSender() {
 						dependency = append(dependency, d.Status.Status.PackageIdentifier)
 					}
 				}
-				plugins = append(plugins, NewPluginData(v.PackageIdentifier, v.Package.Repo.Name, v.Package.Installed, lock.IsLocking(lock.DefaultName, v), v.Status, v.StatusText, dependency))
+				plugins = append(plugins, NewPluginData(v.PackageIdentifier, v.Package.Repo.Name, v.Package.Installed, lock.IsLocking(lock.DefaultName, v), v.Status, v.StatusText, v.Priority, dependency))
 			} else {
-				plugins = append(plugins, NewPluginData(v.PackageIdentifier, "", false, false, v.Status, v.StatusText, []string{}))
+				plugins = append(plugins, NewPluginData(v.PackageIdentifier, "", false, false, v.Status, v.StatusText, v.Priority, []string{}))
 			}
 		}
 		var asking = make([]*cmd.AskData, 0)
