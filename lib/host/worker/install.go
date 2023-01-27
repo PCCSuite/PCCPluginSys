@@ -29,13 +29,16 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 	var repo *data.Repository
 
 	//
-	// Check package already installing
+	// Check package already installing and parse identifier
 	//
 
 	status, ok := data.RunningActions[packageIdentifier]
 
 	if ok {
 		Package = status.Package
+	}
+
+	if Package != nil {
 		packageName = status.Package.Name
 		repoName = status.Package.Repo.Name
 		repo = status.Package.Repo
