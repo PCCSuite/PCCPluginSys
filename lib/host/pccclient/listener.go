@@ -39,52 +39,60 @@ func PCCCliListener(conn *net.TCPConn) {
 			log.Print("Error unmarshaling PCCClient message: ", err)
 			break
 		}
-		switch cmdData.Data_type {
-		case DataTypeRestore:
-			worker.Restore()
-		case DataTypeInstall:
-			cmdData := InstallCommandData{}
-			err = json.Unmarshal(raw, &cmdData)
-			if err != nil {
-				log.Print("Error unmarshaling PCCClient install message: ", err)
-				continue
+		go func() {
+			switch cmdData.Data_type {
+			case DataTypeRestore:
+				worker.Restore()
+			case DataTypeInstall:
+				cmdData := InstallCommandData{}
+				err = json.Unmarshal(raw, &cmdData)
+				if err != nil {
+					log.Print("Error unmarshaling PCCClient install message: ", err)
+					return
+				}
+				_, err := worker.InstallPackage(cmdData.Package, 0)
+				if err != nil {
+					log.Print("Error installing package requested from PCCClient: ", err)
+				}
+			case DataTypeAction:
+				cmdData := ActionCommandData{}
+				err = json.Unmarshal(raw, &cmdData)
+				if err != nil {
+					log.Print("Error unmarshaling PCCClient action message: ", err)
+					return
+				}
+				err = worker.RunAction(cmdData.Plugin, cmdData.Action, 0, context.Background())
+				if err != nil {
+					log.Print("Error running action requested from PCCClient: ", err)
+				}
+			case DataTypeCancel:
+				cmdData := CancelCommandData{}
+				err = json.Unmarshal(raw, &cmdData)
+				if err != nil {
+					log.Print("Error unmarshaling PCCClient cancel message: ", err)
+					return
+				}
+				running, ok := data.RunningActions[cmdData.Package]
+				if !ok {
+					log.Print("Cancelling action not found: ", cmdData.Package)
+					return
+				}
+				running.Cancel()
+			case DataTypeAnswer:
+				cmdData := AnswerCommandData{}
+				err = json.Unmarshal(raw, &cmdData)
+				if err != nil {
+					log.Print("Error unmarshaling PCCClient cancel message: ", err)
+					return
+				}
+				askData, ok := cmd.Asking[cmdData.ID]
+				if ok {
+					askData.Ch <- cmdData.Value
+				}
+			default:
+				log.Print("Unknown datatype from pccclient: ", cmdData.Data_type)
 			}
-			worker.InstallPackage(cmdData.Package, 0)
-		case DataTypeAction:
-			cmdData := ActionCommandData{}
-			err = json.Unmarshal(raw, &cmdData)
-			if err != nil {
-				log.Print("Error unmarshaling PCCClient action message: ", err)
-				continue
-			}
-			worker.RunAction(cmdData.Plugin, cmdData.Action, 0, context.Background())
-		case DataTypeCancel:
-			cmdData := CancelCommandData{}
-			err = json.Unmarshal(raw, &cmdData)
-			if err != nil {
-				log.Print("Error unmarshaling PCCClient cancel message: ", err)
-				continue
-			}
-			running, ok := data.RunningActions[cmdData.Package]
-			if !ok {
-				log.Print("Cancelling action not found: ", cmdData.Package)
-				continue
-			}
-			running.Cancel()
-		case DataTypeAnswer:
-			cmdData := AnswerCommandData{}
-			err = json.Unmarshal(raw, &cmdData)
-			if err != nil {
-				log.Print("Error unmarshaling PCCClient cancel message: ", err)
-				continue
-			}
-			askData, ok := cmd.Asking[cmdData.ID]
-			if ok {
-				askData.Ch <- cmdData.Value
-			}
-		default:
-			log.Print("Unknown datatype from pccclient: ", cmdData.Data_type)
-		}
+		}()
 	}
 }
 
