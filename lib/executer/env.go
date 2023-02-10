@@ -3,9 +3,16 @@ package executer
 import (
 	"log"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	"github.com/PCCSuite/PCCPluginSys/lib/common"
 	"golang.org/x/sys/windows/registry"
+)
+
+const (
+	hwnd_BROADCAST   = uintptr(0xffff)
+	wm_SETTINGCHANGE = uintptr(0x001A)
 )
 
 func Env(cmd common.ExecuterEnvData) {
@@ -65,6 +72,20 @@ func Env(cmd common.ExecuterEnvData) {
 	}
 	if err != nil {
 		log.Println("Failed to set value: ", err)
+		send(common.NewExecuterResult(1, cmd.RequestId))
+		return
+	}
+	// notify env change
+	// https://gist.github.com/microo8/c1b9525efab9bb462adf9d123e855c52
+	envPtr, err := syscall.UTF16PtrFromString("ENVIRONMENT")
+	if err != nil {
+		log.Println("Failed to get ptr from ENVIRONMENT string: ", err)
+		send(common.NewExecuterResult(1, cmd.RequestId))
+		return
+	}
+	_, _, err = syscall.NewLazyDLL("user32.dll").NewProc("SendMessageW").Call(hwnd_BROADCAST, wm_SETTINGCHANGE, 0, uintptr(unsafe.Pointer(envPtr)))
+	if err != nil {
+		log.Println("Failed to broadcast change: ", err)
 		send(common.NewExecuterResult(1, cmd.RequestId))
 		return
 	}
