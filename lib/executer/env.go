@@ -83,11 +83,9 @@ func Env(cmd common.ExecuterEnvData) {
 		send(common.NewExecuterResult(1, cmd.RequestId))
 		return
 	}
-	_, _, err = syscall.NewLazyDLL("user32.dll").NewProc("SendMessageW").Call(hwnd_BROADCAST, wm_SETTINGCHANGE, 0, uintptr(unsafe.Pointer(envPtr)))
-	if err != nil {
-		log.Println("Failed to broadcast change: ", err)
-		send(common.NewExecuterResult(1, cmd.RequestId))
-		return
-	}
+
+	syscall.NewLazyDLL("user32.dll").NewProc("SendMessageW").Call(hwnd_BROADCAST, wm_SETTINGCHANGE, 0, uintptr(unsafe.Pointer(envPtr)))
+	// ignore error because they always return error "The operation completed successfully."
+
 	send(common.NewExecuterResult(0, cmd.RequestId))
 }
