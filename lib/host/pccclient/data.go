@@ -21,20 +21,20 @@ const (
 type ClientNotifyData struct {
 	Data_type DataType         `json:"data_type"`
 	Status    status.SysStatus `json:"status"`
-	Plugins   []PluginData     `json:"plugins"`
+	Packages  []PackageData    `json:"packages"`
 	Asking    []*cmd.AskData   `json:"asking"`
 }
 
-func NewClientNotifyData(status status.SysStatus, plugins []PluginData, asking []*cmd.AskData) ClientNotifyData {
+func NewClientNotifyData(status status.SysStatus, plugins []PackageData, asking []*cmd.AskData) ClientNotifyData {
 	return ClientNotifyData{
 		Data_type: DataTypeNotify,
 		Status:    status,
-		Plugins:   plugins,
+		Packages:  plugins,
 		Asking:    asking,
 	}
 }
 
-type PluginData struct {
+type PackageData struct {
 	Identifier string            `json:"identifier"`
 	Repository string            `json:"repository"`
 	Installed  bool              `json:"installed"`
@@ -45,8 +45,8 @@ type PluginData struct {
 	Dependency []string          `json:"dependency"`
 }
 
-func NewPluginData(name, repository string, installed, locking bool, status data.ActionStatus, statusText string, priority int, dependency []string) PluginData {
-	return PluginData{
+func NewPackageData(name, repository string, installed, locking bool, status data.ActionStatus, statusText string, priority int, dependency []string) PackageData {
+	return PackageData{
 		Identifier: name,
 		Repository: repository,
 		Installed:  installed,

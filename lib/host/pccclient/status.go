@@ -33,7 +33,7 @@ func updateSender() {
 	for sendQueued {
 		sendQueued = false
 		senderMutex.Unlock()
-		var plugins = make([]PluginData, 0)
+		var packages = make([]PackageData, 0)
 		for _, v := range data.RunningActions {
 			if v.Package != nil {
 				dependency := make([]string, 0)
@@ -43,9 +43,9 @@ func updateSender() {
 						dependency = append(dependency, d.Status.Status.PackageIdentifier)
 					}
 				}
-				plugins = append(plugins, NewPluginData(v.PackageIdentifier, v.Package.Repo.Name, v.Package.Installed, lock.IsLocking(lock.DefaultName, v), v.Status, v.StatusText, v.Priority, dependency))
+				packages = append(packages, NewPackageData(v.PackageIdentifier, v.Package.Repo.Name, v.Package.Installed, lock.IsLocking(lock.DefaultName, v), v.Status, v.StatusText, v.Priority, dependency))
 			} else {
-				plugins = append(plugins, NewPluginData(v.PackageIdentifier, "", false, false, v.Status, v.StatusText, v.Priority, []string{}))
+				packages = append(packages, NewPackageData(v.PackageIdentifier, "", false, false, v.Status, v.StatusText, v.Priority, []string{}))
 			}
 		}
 		var asking = make([]*cmd.AskData, 0)
@@ -54,7 +54,7 @@ func updateSender() {
 			asking = append(asking, v)
 		}
 		cmd.AskMutex.RUnlock()
-		data := NewClientNotifyData(status.Status, plugins, asking)
+		data := NewClientNotifyData(status.Status, packages, asking)
 		raw, err := json.Marshal(data)
 		if err != nil {
 			log.Print("Failed to marshal client notify: ", err)
