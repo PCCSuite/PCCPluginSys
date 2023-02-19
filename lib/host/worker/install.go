@@ -123,6 +123,7 @@ func InstallPackage(packageIdentifier string, priority int) (*data.InstallingPac
 			}
 			return installing, err
 		}
+		plugin.ReloadXML()
 		Package = plugin.Package
 		for _, v := range plugin.Dependency.Dependent {
 			depend, err := InstallPackage(v.Name, priority)

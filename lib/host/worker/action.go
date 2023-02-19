@@ -24,6 +24,7 @@ func RunAction(pluginName string, action string, priority int, ctx context.Conte
 	if strings.ContainsRune(action, ':') {
 		return ErrDirectOtherAction
 	}
+	pl.ReloadXML()
 	ctx, cancel := context.WithCancel(ctx)
 	pl.RunningAction.Cancel = cancel
 	pl.RunningAction.Priority = priority

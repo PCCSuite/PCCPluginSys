@@ -27,6 +27,14 @@ type Plugin struct {
 	Actions     PluginActions    `xml:"actions"`
 }
 
+func (p *Plugin) ReloadXML() error {
+	file, err := os.ReadFile(filepath.Join(p.GetRepoDir(), "plugin.xml"))
+	if err != nil {
+		return err
+	}
+	return xml.Unmarshal(file, p)
+}
+
 func (p *Plugin) GetRepoDir() string {
 	return filepath.Join(p.Repo.Directory, p.General.Name)
 }
@@ -104,6 +112,7 @@ func GetPlugin(name string) *Plugin {
 func LoadPlugin(repo *Repository, name string) (*Plugin, error) {
 	for _, v := range Plugins {
 		if v.Name == name && v.Repo == repo {
+			v.ReloadXML()
 			return v, nil
 		}
 	}
