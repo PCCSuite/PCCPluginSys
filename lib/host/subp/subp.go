@@ -82,7 +82,7 @@ func startAdminExecuter() {
 	cwdPtr, _ := syscall.UTF16PtrFromString(config.Config.TempDir)
 	argPtr, _ := syscall.UTF16PtrFromString(args)
 
-	var showCmd int32 = 1 //SW_NORMAL
+	var showCmd int32 = 0 //SW_HIDE
 
 	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
 	if err != nil {
