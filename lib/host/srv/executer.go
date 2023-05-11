@@ -50,19 +50,14 @@ func listenExecuter(conn *net.TCPConn, admin bool) {
 	if execConnectChan != nil {
 		execConnectChan <- struct{}{}
 	}
+
+	decoder := json.NewDecoder(conn)
+
 	for {
-		buf := make([]byte, 8192)
-		i, err := conn.Read(buf)
-		raw := buf[:i]
-		if err != nil {
-			log.Print("Error in reading message from executer: ", err)
-			conn.Close()
-			return
-		}
 		data := common.ExecuterResultData{}
-		err = json.Unmarshal(raw, &data)
+		err := decoder.Decode(&data)
 		if err != nil {
-			log.Print("Error in unmarshaling message from executer: ", err)
+			log.Print("Error in decoding message from executer: ", err)
 			continue
 		}
 		cmd.ExecMutex.RLock()

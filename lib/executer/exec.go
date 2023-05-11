@@ -18,7 +18,7 @@ type ExecCmd struct {
 	command   *exec.Cmd
 }
 
-func Exec(cmddata common.ExecuterExecData) {
+func Exec(cmddata common.ExecuterCommandData) {
 	cmd := exec.Command("cmd.exe", append([]string{"/C"}, cmddata.Args...)...)
 	cmd.Dir = cmddata.WorkDir
 	cmd.Env = os.Environ()

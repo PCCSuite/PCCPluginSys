@@ -25,18 +25,12 @@ func PCCCliListener(conn *net.TCPConn) {
 	}()
 	go subscriber()
 	go SendUpdate()
+	decoder := json.NewDecoder(conn)
 	for {
-		buf := make([]byte, 8192)
-		i, err := Conn.Read(buf)
-		raw := buf[:i]
-		if err != nil {
-			log.Print("Error reading PCCClient message: ", err)
-			break
-		}
 		cmdData := CommandData{}
-		err = json.Unmarshal(raw, &cmdData)
+		err := decoder.Decode(&cmdData)
 		if err != nil {
-			log.Print("Error unmarshaling PCCClient message: ", err)
+			log.Print("Error decoding PCCClient message: ", err)
 			break
 		}
 		go func() {
@@ -44,34 +38,16 @@ func PCCCliListener(conn *net.TCPConn) {
 			case DataTypeRestore:
 				worker.Restore()
 			case DataTypeInstall:
-				cmdData := InstallCommandData{}
-				err = json.Unmarshal(raw, &cmdData)
-				if err != nil {
-					log.Print("Error unmarshaling PCCClient install message: ", err)
-					return
-				}
 				_, err := worker.InstallPackage(cmdData.Package, 0)
 				if err != nil {
 					log.Print("Error installing package requested from PCCClient: ", err)
 				}
 			case DataTypeAction:
-				cmdData := ActionCommandData{}
-				err = json.Unmarshal(raw, &cmdData)
-				if err != nil {
-					log.Print("Error unmarshaling PCCClient action message: ", err)
-					return
-				}
 				err = worker.RunAction(cmdData.Plugin, cmdData.Action, 0, context.Background())
 				if err != nil {
 					log.Print("Error running action requested from PCCClient: ", err)
 				}
 			case DataTypeCancel:
-				cmdData := CancelCommandData{}
-				err = json.Unmarshal(raw, &cmdData)
-				if err != nil {
-					log.Print("Error unmarshaling PCCClient cancel message: ", err)
-					return
-				}
 				running, ok := data.RunningActions[cmdData.Package]
 				if !ok {
 					log.Print("Cancelling action not found: ", cmdData.Package)
@@ -79,12 +55,6 @@ func PCCCliListener(conn *net.TCPConn) {
 				}
 				running.Cancel()
 			case DataTypeAnswer:
-				cmdData := AnswerCommandData{}
-				err = json.Unmarshal(raw, &cmdData)
-				if err != nil {
-					log.Print("Error unmarshaling PCCClient cancel message: ", err)
-					return
-				}
 				askData, ok := cmd.Asking[cmdData.ID]
 				if ok {
 					askData.Ch <- cmdData.Value

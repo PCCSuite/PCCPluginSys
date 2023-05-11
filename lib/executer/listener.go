@@ -8,16 +8,12 @@ import (
 )
 
 func listen() {
+
+	decoder := json.NewDecoder(Conn)
+
 	for {
-		buf := make([]byte, 8192)
-		i, err := Conn.Read(buf)
-		raw := buf[:i]
-		if err != nil {
-			log.Print("Error in reading message from conn: ", err)
-			return
-		}
 		cmddata := common.ExecuterCommandData{}
-		err = json.Unmarshal(raw, &cmddata)
+		err := decoder.Decode(&cmddata)
 		if err != nil {
 			log.Print("Error in unmarshaling message from conn: ", err)
 			continue
@@ -28,29 +24,11 @@ func listen() {
 		}
 		switch cmddata.Command {
 		case common.ExecuterCommandExec:
-			execdata := common.ExecuterExecData{}
-			err = json.Unmarshal(raw, &execdata)
-			if err != nil {
-				log.Print("Error in unmarshaling exec message from conn: ", err)
-				continue
-			}
-			Exec(execdata)
+			Exec(cmddata)
 		case common.ExecuterCommandEnv:
-			envdata := common.ExecuterEnvData{}
-			err = json.Unmarshal(raw, &envdata)
-			if err != nil {
-				log.Print("Error in unmarshaling env message from conn: ", err)
-				continue
-			}
-			go Env(envdata)
+			go Env(cmddata)
 		case common.ExecuterCommandStop:
-			stopdata := common.ExecuterStopData{}
-			err = json.Unmarshal(raw, &stopdata)
-			if err != nil {
-				log.Print("Error in unmarshaling stop message from conn: ", err)
-				continue
-			}
-			Stop(stopdata)
+			Stop(cmddata)
 		default:
 			log.Print("Unknown command: ", cmddata.Command)
 		}

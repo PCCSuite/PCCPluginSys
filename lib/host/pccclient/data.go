@@ -60,26 +60,16 @@ func NewPackageData(name, repository string, installed, locking bool, status dat
 
 type CommandData struct {
 	Data_type DataType `json:"data_type"`
-}
 
-type InstallCommandData struct {
-	Data_type DataType `json:"data_type"`
-	Package   string   `json:"package"`
-}
+	// Install, Cancel
+	Package string `json:"package"`
 
-type ActionCommandData struct {
-	Data_type DataType `json:"data_type"`
-	Plugin    string   `json:"plugin"`
-	Action    string   `json:"action"`
-}
+	// Action
+	Plugin string `json:"plugin"`
+	// Action
+	Action string `json:"action"`
 
-type CancelCommandData struct {
-	Data_type DataType `json:"data_type"`
-	Package   string   `json:"package"`
-}
-
-type AnswerCommandData struct {
-	Data_type DataType `json:"data_type"`
-	ID        int      `json:"id"`
-	Value     string   `json:"value"`
+	// Answer
+	ID    int    `json:"id"`
+	Value string `json:"value"`
 }

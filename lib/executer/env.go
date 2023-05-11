@@ -15,7 +15,7 @@ const (
 	wm_SETTINGCHANGE = uintptr(0x001A)
 )
 
-func Env(cmd common.ExecuterEnvData) {
+func Env(cmd common.ExecuterCommandData) {
 	var regKey registry.Key
 	var err error
 	if cmd.Target == common.ExecuterEnvTargetMachine {

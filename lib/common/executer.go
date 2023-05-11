@@ -16,20 +16,34 @@ const (
 type ExecuterCommandData struct {
 	DataType DataType        `json:"data_type"`
 	Command  ExecuterCommand `json:"command"`
+
+	// ExecCommand, EnvCommand
+	RequestId int `json:"request_id"`
+
+	// ExecCommand
+	Args []string `json:"args"`
+	// ExecCommand
+	WorkDir string `json:"work_dir"`
+	// ExecCommand
+	LogFile string `json:"log_file"`
+	// ExecCommand
+	Env []string `json:"env"`
+
+	// EnvCommand
+	Target ExecuterEnvTarget `json:"target"`
+	// EnvCommand
+	Mode ExecuterEnvMode `json:"mode"`
+	// EnvCommand
+	Key string `json:"key"`
+	// EnvCommand
+	Value string `json:"value"`
+
+	// StopCommand
+	StopId int `json:"stop_id"`
 }
 
-type ExecuterExecData struct {
-	DataType  DataType        `json:"data_type"`
-	Command   ExecuterCommand `json:"command"`
-	Args      []string        `json:"args"`
-	WorkDir   string          `json:"work_dir"`
-	LogFile   string          `json:"log_file"`
-	Env       []string        `json:"env"`
-	RequestId int             `json:"request_id"`
-}
-
-func NewExecuterExec(args []string, workDir, logFile string, env []string, requestId int) ExecuterExecData {
-	return ExecuterExecData{
+func NewExecuterExec(args []string, workDir, logFile string, env []string, requestId int) ExecuterCommandData {
+	return ExecuterCommandData{
 		DataType:  DataTypeExecuterCommand,
 		Command:   ExecuterCommandExec,
 		Args:      args,
@@ -55,18 +69,8 @@ const (
 	ExecuterEnvModeAddPrefix ExecuterEnvMode = "ADD_PREFIX"
 )
 
-type ExecuterEnvData struct {
-	DataType  DataType          `json:"data_type"`
-	Command   ExecuterCommand   `json:"command"`
-	Target    ExecuterEnvTarget `json:"target"`
-	Mode      ExecuterEnvMode   `json:"mode"`
-	Key       string            `json:"key"`
-	Value     string            `json:"value"`
-	RequestId int               `json:"request_id"`
-}
-
-func NewExecuterEnv(target ExecuterEnvTarget, mode ExecuterEnvMode, key, value string, requestId int) ExecuterEnvData {
-	return ExecuterEnvData{
+func NewExecuterEnv(target ExecuterEnvTarget, mode ExecuterEnvMode, key, value string, requestId int) ExecuterCommandData {
+	return ExecuterCommandData{
 		DataType:  DataTypeExecuterCommand,
 		Command:   ExecuterCommandEnv,
 		Target:    target,
@@ -77,14 +81,8 @@ func NewExecuterEnv(target ExecuterEnvTarget, mode ExecuterEnvMode, key, value s
 	}
 }
 
-type ExecuterStopData struct {
-	DataType DataType        `json:"data_type"`
-	Command  ExecuterCommand `json:"command"`
-	StopId   int             `json:"stop_id"`
-}
-
-func NewExecuterStop(stopId int) ExecuterStopData {
-	return ExecuterStopData{
+func NewExecuterStop(stopId int) ExecuterCommandData {
+	return ExecuterCommandData{
 		DataType: DataTypeExecuterCommand,
 		Command:  ExecuterCommandStop,
 		StopId:   stopId,
