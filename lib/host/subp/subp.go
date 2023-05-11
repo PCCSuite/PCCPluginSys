@@ -74,14 +74,15 @@ func startUserExecuter() {
 
 func startAdminExecuter() {
 	verb := "runas"
-	args := "executer-admin"
+	exe := "cmd.exe"
+	args := "/C " + ExecutablePath + " executer-admin > " + filepath.Join(config.Config.TempDir, "executer-admin.log") + " 2>&1"
 
 	verbPtr, _ := syscall.UTF16PtrFromString(verb)
-	exePtr, _ := syscall.UTF16PtrFromString(ExecutablePath)
+	exePtr, _ := syscall.UTF16PtrFromString(exe)
 	cwdPtr, _ := syscall.UTF16PtrFromString(config.Config.TempDir)
 	argPtr, _ := syscall.UTF16PtrFromString(args)
 
-	var showCmd int32 = 1 //SW_NORMAL
+	var showCmd int32 = 0 //SW_HIDE
 
 	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
 	if err != nil {

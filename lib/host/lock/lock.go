@@ -78,6 +78,8 @@ func Unlock(name string, action *data.RunningAction) {
 	if !ok {
 		return
 	}
+	lock.mutex.Lock()
+	defer lock.mutex.Unlock()
 	for i, v := range lock.requests {
 		if v.action == action {
 			lock.requests = append(lock.requests[:i], lock.requests[i+1:]...)
@@ -145,9 +147,7 @@ func CheckLock(name string) {
 		if found && !lock.have.action.IsEnded() {
 			return
 		} else {
-			lock.mutex.Lock()
-			lock.have = nil
-			lock.mutex.Unlock()
+			Unlock(name, lock.have.action)
 		}
 	} else {
 		lock.mutex.RUnlock()
