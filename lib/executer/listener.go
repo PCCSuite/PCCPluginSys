@@ -16,11 +16,11 @@ func listen() {
 		err := decoder.Decode(&cmddata)
 		if err != nil {
 			log.Print("Error in unmarshaling message from conn: ", err)
-			continue
+			return
 		}
 		if cmddata.DataType != common.DataTypeExecuterCommand {
 			log.Print("Unexpected data_type from conn: ", err)
-			continue
+			return
 		}
 		switch cmddata.Command {
 		case common.ExecuterCommandExec:
